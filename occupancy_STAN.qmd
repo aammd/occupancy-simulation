@@ -1,26 +1,20 @@
 ---
 title: "Simple occupancy STAN"
 author: "Andrew MacDonald and Gabriel Bergeron"
-
 format: 
   html:
     page-layout: article
 editor: source
 date: today
-
 toc: true
 toc-location: left
 number-sections: true
 number-depth: 3
-
 bibliography: references.bib
-
 comments:
   hypothesis: true
-
 editor_options: 
   chunk_output_type: inline
-
 execute:
   cache: false
 ---
@@ -112,157 +106,3 @@ fake_data |>
   # mutate(prop = abd/effort) |> 
   pull(y) |> mean()
 ```
-
-```{r}
-# fake_data |> 
-#   mutate(prop = abd/effort) |> 
-#   pull(prop) |> hist(main = "")
-# abline(v = 0.14, lty = 2)
-
-(1 - (1 - d)^1) * p
-
-```
-
-
-```{r}
-#| echo: false
-library(cmdstanr)
-simple_occ_logit <- cmdstan_model("r/simple_occ_logit.stan")
-```
-
-
-```{r}
-data_list <- list(N = nrow(fake_data),
-                  y = fake_data$y,
-                  sample_size = fake_data$effort)
-data_list
-```
-
-
-```{r}
-#| echo: false
-#| output: false
-model_result <- simple_occ_logit$sample(data = data_list)
-
-```
-
-
-```{r}
-model_result$summary()
-
-bayesplot::mcmc_hist(model_result$draws("p")) +
-  bayesplot::vline_at(v = p) +
-  xlim(0, 1) 
-
-bayesplot::mcmc_hist(model_result$draws("d")) +
-  bayesplot::vline_at(v = d) +
-  xlim(0, 1) 
-
-```
-
-### Beta distributions
-
-#### p = 0.7
-```{r}
-#| echo: false
-
-s = seq(0, 1, length = 100)
-
-plot(s, dbeta(s, 2, 2,), type = "l", 
-     ylab = "density", xlab = "p")
-
-```
-#### d = 0.3
-```{r}
-#| echo: false
-
-plot(s, dbeta(s, 2, 5,), type = "l", 
-     ylab = "density", xlab = "d")
-
-```
-
-### Simulation over different values of p and d
-```{r}
-#| echo: false
-#| output: false
-
-plot.p <- list()
-plot.d <- list()
-
-param <- c(0.2, 0.4, 0.6, 0.8)
-
-index = 1
-
-for (p in 1:length(param)) {
-  for (d in 1:length(param)) {
-    
-    # Create fake data for specific values of p and d
-    fake_data_table <- tibble(sample_id = 1:200,
-                              real_pres = rbinom(n = length(sample_id),
-                                                 p = param[p],
-                                                 size = 1),
-                              effort = round(
-                                runif(
-                                  n = length(sample_id),
-                                  min = 1, max = 25)
-                                )) |>
-      rowwise() |>
-      mutate(pa = 1 - (1 - param[d])^effort,
-             y = rbinom(1, 1, pa) * real_pres)
-    
-    # Creat data list for Stan
-    data_list_table <- list(N = nrow(fake_data_table),
-                            y = fake_data_table$y,
-                            sample_size = fake_data_table$effort)
-    
-    # Run Stan model
-    model_result_table <- simple_occ_logit$sample(data = data_list_table)
-    
-    # Index plot into list
-    plot.p[[index]] <- bayesplot::mcmc_hist(model_result_table$draws("p")) +
-      bayesplot::vline_at(v = param[p]) +
-      xlim(0, 1) + ggtitle(paste("p =", param[p], ", d =", param[d]))
-    plot.d[[index]] <- bayesplot::mcmc_hist(model_result_table$draws("d")) +
-      bayesplot::vline_at(v = param[d]) +
-      xlim(0, 1)+ ggtitle(paste("p =", param[p], ", d =", param[d]))
-    
-    index = index + 1
-  }
-}
-
-```
-
-```{r}
-#| column: page
-#| echo: false
-#| warning: false
-#| fig-align: center
-#| fig-height: 8
-#| fig-width: 10
-
-
-library(gridExtra)
-
-grid.arrange(plot.d[[1]], plot.d[[2]], plot.d[[3]], plot.d[[4]],
-             plot.d[[5]], plot.d[[6]], plot.d[[7]], plot.d[[8]],
-             plot.d[[9]], plot.d[[10]], plot.d[[11]], plot.d[[12]],
-             plot.d[[13]], plot.d[[14]], plot.d[[15]], plot.d[[16]],
-             ncol = 4, nrow = 4)
-
-grid.arrange(plot.p[[1]], plot.p[[2]], plot.p[[3]], plot.p[[4]],
-             plot.p[[5]], plot.p[[6]], plot.p[[7]], plot.p[[8]],
-             plot.p[[9]], plot.p[[10]], plot.p[[11]], plot.p[[12]],
-             plot.p[[13]], plot.p[[14]], plot.p[[15]], plot.p[[16]],
-             ncol = 4, nrow = 4)
-```
-
-::: {style="text-align: center;"}
-** Prochaines étapes **
-:::
-
-- comprendre pourquoi avec le programme STAN on ne réussis pas à trouver exactement les valeurs de paramètre utilisé pour la sumulation
-
-- Ajouter la fonction pour la probabilité de présence $p$ en fonction de $t$
-- Tester le modèle avec une espèce pour une année
-- Lancer le modèle pour une espèce, plusieurs années (avec paramètres différent pour les années)
-- Voir si $p$ et $d$ changent avec les années
