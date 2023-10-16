@@ -1,38 +1,80 @@
-# Created by use_targets().
-# Follow the comments below to fill in this target script.
-# Then follow the manual to check and run the pipeline:
-#   https://books.ropensci.org/targets/walkthrough.html#inspect-the-pipeline # nolint
-
-# Load packages required to define the pipeline:
 library(targets)
-# library(tarchetypes) # Load other packages as needed. # nolint
+library(stantargets)
+library(dplyr)
+# This is an example _targets.R file. Every
+# {targets} pipeline needs one.
+# Use tar_script() to create _targets.R and tar_edit()
+# to open it again for editing.
+# Then, run tar_make() to run the pipeline
+# and tar_read(summary) to view the results.
 
-# Set target options:
-tar_option_set(
-  packages = c("tibble"), # packages that your targets need to run
-  format = "rds" # default storage format
-  # Set other options as needed.
-)
+# Define custom functions and other global objects.
+# This is where you write source(\"R/functions.R\")
+# if you keep your functions in external scripts.
+source("functions.R")
+tar_option_set(seed = 3)
 
-# tar_make_clustermq() configuration (okay to leave alone):
-options(clustermq.scheduler = "multicore")
+# Set target-specific options such as packages.
+tar_option_set(packages = c("dplyr", "ggplot2"))
 
-# tar_make_future() configuration (okay to leave alone):
-# Install packages {{future}}, {{future.callr}}, and {{future.batchtools}} to allow use_targets() to configure tar_make_future() options.
+data_values <- expand.grid(
+  n_per_group = c(1, 3, 5, 10, 15),
+  J = c(3, 10, 20)) |>
+  mutate(sim_id = paste0("sim", 1:length(n_per_group)))
 
-# Run the R scripts in the R/ folder with your custom functions:
-tar_source()
-# source("other_functions.R") # Source other scripts as needed. # nolint
-
-# Replace the target list below with your own:
+# End this file with a list of target objects.
 list(
-  tar_target(
-    name = data,
-    command = tibble(x = rnorm(100), y = rnorm(100))
-#   format = "feather" # efficient storage of large data frames # nolint
+  tar_stan_mcmc_rep_summary(
+    nogrp,
+    stan_files = "no_groups.stan",
+    batches = 4,
+    reps = 3,
+    data = simulate_normal(50),
+    quiet = TRUE
+  ),
+  tar_stan_mcmc_rep_summary(
+    somegroup, stan_files = "some_groups.stan",
+    batches = 4,
+    reps = 3,
+    data = simulate_normal_group(n_per_group = 3, J = 10),
+    quiet = TRUE
   ),
   tar_target(
-    name = model,
-    command = coefficients(lm(y ~ x, data = data))
+    name = no_groups,
+    command = cmdstanr::cmdstan_model(stan_file = "no_groups.stan")
+  ),
+  tar_target(
+    name = some_groups,
+    command = cmdstanr::cmdstan_model(stan_file = "some_groups.stan")
+  ),
+  tar_stan_mcmc(
+    demo_groups,
+    stan_files = "some_groups.stan",
+    data = simulate_normal_group(n_per_group = 10, J = 10),
+    quiet = TRUE
+  ),
+  tarchetypes::tar_map_rep(
+    increase_group_reps,
+    command = compare_two_models_loo(
+      model1 = no_groups,
+      model2 = some_groups,
+      names = c("no_groups", "some_groups"),
+      n_per_group = n_per_group, J = J),
+    values = data_values,
+    batches = 2,
+    reps = 4,
+    names = tidyselect::any_of("scenario")
+  ),
+  tar_target(
+    power_fig,
+    command = increase_group_reps |>
+      filter(model == "no_groups") |>
+      ggplot(aes(x = n_per_group, y = elpd_diff)) + geom_point() +
+      facet_wrap(~J)
+  ),
+  tarchetypes::tar_render(
+    readme,
+    path = "README.Rmd"
   )
 )
+
