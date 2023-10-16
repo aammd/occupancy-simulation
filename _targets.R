@@ -1,6 +1,7 @@
 library(targets)
 library(stantargets)
 library(dplyr)
+library(stantargets)
 # This is an example _targets.R file. Every
 # {targets} pipeline needs one.
 # Use tar_script() to create _targets.R and tar_edit()
@@ -24,7 +25,7 @@ tar_option_set(packages = c("dplyr", "ggplot2"))
 
 # End this file with a list of target objects.
 list(
-  tar_stan_mcmc_rep_summary(
+  tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values
     simple_occ,
     stan_files = "simple_occ.stan",
     batches = 4,
@@ -38,7 +39,7 @@ list(
     ),
     quiet = TRUE
   ),
-  tar_stan_mcmc_rep_summary(
+  tar_stan_mcmc_rep_summary( # Run models on multiples data sets with uniformly sample parameter values
     vary_params,
     stan_files = "simple_occ.stan",
     batches = 8,
@@ -46,15 +47,30 @@ list(
     data = simulate_occ_eff_params(nsample = 200),
     variables = c("prob_pres", "prob_detect"),
     summaries = list(
-      ~posterior::quantile2(.x, probs = c(0.025, 0.975))
+      ~posterior::quantile2(.x, probs = c(0.025, 0.975)) # Extract the quantile interval of the posterior distributions
     ),
     quiet = TRUE,
     refresh = 0L,
     parallel_chains = 4
   ),
-  tar_target(
+  tar_target( # Evaluate the coverage of the posterior. What % of time the true parameters falls within the posterior interval
     cov_vary_params,
     command = calc_coverage(vary_params)
+  ),
+  tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
+    fixed_eff_time,
+    stan_files = "occ_eff_time.stan",
+    batches = 4,
+    reps = 3,
+    data = simulate_occ_eff_time(prob_detect = .3,
+                                 a1 = 1, a2 = 0.2,
+                                 b1 = 150, b2 = 220,
+                                 nsample = 200),
+    variables = c("prob_detect", "a1", "a2", "b1", "b2"),
+    summaries = list(
+      ~posterior::quantile2(.x, probs = c(0.025, 0.975))
+    ),
+    quiet = TRUE
   )
   # tar_stan_mcmc_rep_summary(
   #   somegroup, stan_files = "some_groups.stan",

@@ -1,4 +1,7 @@
-
+# Function to simulate data with :
+# Presence ~ 1
+# Detection ~ Effort
+# Fixed parameters values
 simulate_occ_effort <- function(prob_pres, prob_detect, nsample = 200) {
   df_sim <- tibble(sample_id = 1:nsample,
          real_pres = rbinom(n = nsample,
@@ -24,6 +27,10 @@ simulate_occ_effort <- function(prob_pres, prob_detect, nsample = 200) {
   )
 }
 
+# Function to simulate data with :
+# Presence ~ 1
+# Detection ~ Effort
+# Varying parameters values
 simulate_occ_eff_params <- function(nsample = 200) {
   
   prob_pres <- rbeta(1, 2, 2)
@@ -53,6 +60,41 @@ simulate_occ_eff_params <- function(nsample = 200) {
   )
 }
 
+# Function to extract probability of presence based on a 
+prob_pres_HOF <- function(a1, a2, b1, b2, jj_date) ((1 / (1 + exp(-a1*(jj_date - b1)))) * (1 / (1 + exp(a2*(jj_date - b2)))))
+
+# Function to simulate data with :
+# Presence ~ Date
+# Detection ~ Effort
+# Fixed parameters values
+simulate_occ_eff_time <- function(prob_detect, nsample = 200,
+                                  a1, a2, b1, b2) {
+  df_sim <- tibble(sample_id = 1:nsample,
+                   jj_date = runif(n = nsample,
+                                   min = 130, max = 240),
+                   real_pres = prob_pres_HOF(a1, a2, b1, b2, jj_date),
+                   effort = round(
+                     runif(
+                       n = nsample,
+                       min = 1, max = 25)
+                   )) |>
+    rowwise() |> 
+    mutate(pa = 1 - (1 - prob_detect)^effort,
+           y = rbinom(n = 1, p = pa, size = 1) * rbinom(n = 1, p = real_pres, size = 1))
+  
+  list(
+    N = nsample,
+    y = df_sim$y,
+    effort = df_sim$effort,
+    .join_data = list(
+      prob_detect = prob_detect,
+      a1 = a1, a2 = a2,
+      b1 = b1, b2 = b2
+    )
+  )
+}
+
+# Function to extract the quantile interval of the posterior distributions
 calc_coverage <- function(df_joined){
   df_joined |> 
     group_by(variable) |> 
