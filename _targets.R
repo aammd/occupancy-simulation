@@ -60,17 +60,36 @@ list(
   tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
     fixed_eff_time,
     stan_files = "occ_eff_time.stan",
-    batches = 4,
-    reps = 3,
-    data = simulate_occ_eff_time(prob_detect = .3,
-                                 a1 = 1, a2 = 0.2,
-                                 b1 = 150, b2 = 220,
-                                 nsample = 200),
-    variables = c("prob_detect", "a1", "a2", "b1", "b2"),
+    batches = 5,
+    reps = 4,
+    data = simulate_occ_eff_time(nsample = 200),
+    variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2"),
     summaries = list(
       ~posterior::quantile2(.x, probs = c(0.025, 0.975))
     ),
-    quiet = TRUE
+    quiet = TRUE,
+    refresh = 0L
+  ),
+  tar_target(
+    cov_fixed_eff_time,
+    command = calc_coverage(fixed_eff_time)
+  ),
+  tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
+    fixed_eff_time_log,
+    stan_files = "occ_eff_time_log.stan",
+    batches = 1,
+    reps = 4,
+    data = simulate_occ_eff_time_logscale(nsample = 200),
+    variables = c("logit_prob_detect", "log_a1", "log_a2", "b1", "b2"),
+    summaries = list(
+      ~posterior::quantile2(.x, probs = c(0.025, 0.975))
+    ),
+    quiet = TRUE,
+    refresh = 0L
+  ),
+  tar_target(
+    cov_fixed_eff_time_log,
+    command = calc_coverage(fixed_eff_time_log)
   )
   # tar_stan_mcmc_rep_summary(
   #   somegroup, stan_files = "some_groups.stan",
