@@ -20,10 +20,10 @@ parameters {
 // and standard deviation 'sigma'.
 model {
   prob_detect ~ beta(2, 5);
-  // a1 ~ beta(2, 5); Trouver une distribution de prior adéquate
-  // a2 ~ beta(2, 5); L'idée d'Andrew de faire un log de la fct HOF permettrait de borner les paramètres et leurs distributions
-  // b1 ~ beta(2, 5);
-  // b2 ~ beta(2, 5);
+  a1 ~ uniform(0, 100);
+  a2 ~ uniform(0, 100);
+  b1 ~ uniform(1, 365);
+  b2 ~ uniform(1, 365);
   y ~ bernoulli((1 - (1 - prob_detect)^effort) * ((1 / (1 + exp(-a1*(jj_date - b1)))) * (1 / (1 + exp(a2*(jj_date - b2))))));
 }
 
