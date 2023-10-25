@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.269">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Andrew MacDonald and Gabriel Bergeron">
+<meta name="dcterms.date" content="2023-10-23">
+
+<title>Simple occupancy STAN</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="occupancy_STAN_files/libs/clipboard/clipboard.min.js"></script>
+<script src="occupancy_STAN_files/libs/quarto-html/quarto.js"></script>
+<script src="occupancy_STAN_files/libs/quarto-html/popper.min.js"></script>
+<script src="occupancy_STAN_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="occupancy_STAN_files/libs/quarto-html/anchor.min.js"></script>
+<link href="occupancy_STAN_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="occupancy_STAN_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="occupancy_STAN_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="occupancy_STAN_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="occupancy_STAN_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script async="" src="https://hypothes.is/embed.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article toc-left">
+<div id="quarto-sidebar-toc-left" class="sidebar toc-left">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#very-simple-occupancy-model-that-controls-for-effort" id="toc-very-simple-occupancy-model-that-controls-for-effort" class="nav-link active" data-scroll-target="#very-simple-occupancy-model-that-controls-for-effort"><span class="toc-section-number">1</span>  Very simple occupancy model that controls for effort</a>
+  <ul class="collapse">
+  <li><a href="#simple-stan-model-for-a-static-set-of-parameters" id="toc-simple-stan-model-for-a-static-set-of-parameters" class="nav-link" data-scroll-target="#simple-stan-model-for-a-static-set-of-parameters"><span class="toc-section-number">1.1</span>  Simple Stan model for a static set of parameters</a>
+  <ul class="collapse">
+  <li><a href="#simulation-results" id="toc-simulation-results" class="nav-link" data-scroll-target="#simulation-results"><span class="toc-section-number">1.1.1</span>  Simulation results</a></li>
+  </ul></li>
+  <li><a href="#simple-stan-model-for-a-varying-set-of-parameters" id="toc-simple-stan-model-for-a-varying-set-of-parameters" class="nav-link" data-scroll-target="#simple-stan-model-for-a-varying-set-of-parameters"><span class="toc-section-number">1.2</span>  Simple Stan model for a varying set of parameters</a>
+  <ul class="collapse">
+  <li><a href="#simulation-results-1" id="toc-simulation-results-1" class="nav-link" data-scroll-target="#simulation-results-1"><span class="toc-section-number">1.2.1</span>  Simulation results</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#occupancy-model-that-considers-time" id="toc-occupancy-model-that-considers-time" class="nav-link" data-scroll-target="#occupancy-model-that-considers-time"><span class="toc-section-number">2</span>  Occupancy model that considers time</a>
+  <ul class="collapse">
+  <li><a href="#simple-stan-model-for-static-set-of-parameters" id="toc-simple-stan-model-for-static-set-of-parameters" class="nav-link" data-scroll-target="#simple-stan-model-for-static-set-of-parameters"><span class="toc-section-number">2.1</span>  Simple Stan model for static set of parameters</a>
+  <ul class="collapse">
+  <li><a href="#small-detour-on-log-scale" id="toc-small-detour-on-log-scale" class="nav-link" data-scroll-target="#small-detour-on-log-scale"><span class="toc-section-number">2.1.1</span>  Small detour on log scale</a></li>
+  <li><a href="#simulation-results-2" id="toc-simulation-results-2" class="nav-link" data-scroll-target="#simulation-results-2"><span class="toc-section-number">2.1.2</span>  Simulation results</a></li>
+  </ul></li>
+  <li><a href="#simple-stan-model-for-varying-set-of-parameters" id="toc-simple-stan-model-for-varying-set-of-parameters" class="nav-link" data-scroll-target="#simple-stan-model-for-varying-set-of-parameters"><span class="toc-section-number">2.2</span>  Simple Stan model for varying set of parameters</a>
+  <ul class="collapse">
+  <li><a href="#simulation-results-3" id="toc-simulation-results-3" class="nav-link" data-scroll-target="#simulation-results-3"><span class="toc-section-number">2.2.1</span>  Simulation results</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#testing-our-occupancy-model-with-adequate-distributions" id="toc-testing-our-occupancy-model-with-adequate-distributions" class="nav-link" data-scroll-target="#testing-our-occupancy-model-with-adequate-distributions"><span class="toc-section-number">3</span>  Testing our occupancy model with adequate distributions</a>
+  <ul class="collapse">
+  <li><a href="#effort" id="toc-effort" class="nav-link" data-scroll-target="#effort"><span class="toc-section-number">3.1</span>  Effort</a></li>
+  <li><a href="#date" id="toc-date" class="nav-link" data-scroll-target="#date"><span class="toc-section-number">3.2</span>  Date</a></li>
+  </ul></li>
+  <li><a href="#testing-our-occupancy-model-with-data" id="toc-testing-our-occupancy-model-with-data" class="nav-link" data-scroll-target="#testing-our-occupancy-model-with-data"><span class="toc-section-number">4</span>  Testing our occupancy model with data</a></li>
+  </ul>
+</nav>
+</div>
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+</div>
+<main class="content page-columns page-full" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Simple occupancy STAN</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Andrew MacDonald and Gabriel Bergeron </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">October 23, 2023</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+</header>
+
+<div class="cell">
+
+</div>
+<section id="very-simple-occupancy-model-that-controls-for-effort" class="level1 page-columns page-full" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Very simple occupancy model that controls for effort</h1>
+<p>We begin with a simple occupancy model where the probability of observing a presence (<span class="math inline">\(P\)</span>) is a Bernoulli process described by <span class="math inline">\(w\)</span> the probability of observation and <span class="math inline">\(p\)</span> the probability of a true presence.</p>
+<p><span class="math display">\[
+\begin{align}
+Pr(y = 1) &amp;= Bernoulli(wp) \\
+w &amp;= 1 - (1 - d)^{effort} \\\\
+logit(p) &amp;= \alpha \\
+logit(d) &amp;= \beta \\\\
+\alpha &amp;\sim \text{N}(-1, 0.5) \\
+\beta &amp;\sim \text{N}(0, 0.5) \\\\
+effort &amp;= \text{Nb observers} * \text{Nb hours}
+\end{align}
+\]</span></p>
+<p>The curve of the effect of effort on probability of observation looks like this (here for d = 0.3)</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>The probability of observing a presence (<span class="math inline">\(y = 1\)</span>) is the product of the probability of observing the specie and the probability that the specie is really there. The probability of not observing a presence is the probability of missing the species while it is present AND the probability that the specie is absent.</p>
+<p><span class="math display">\[
+y =
+\begin{cases}
+y = 1, &amp; wp \\
+y = 0, &amp; (1-w)p + 1 - p
+\end{cases}
+\]</span></p>
+<section id="simple-stan-model-for-a-static-set-of-parameters" class="level2 page-columns page-full" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="simple-stan-model-for-a-static-set-of-parameters"><span class="header-section-number">1.1</span> Simple Stan model for a static set of parameters</h2>
+<p>Parameters: p = 0.7 d = 0.3</p>
+<p>We create a fake data set in which we consider the effect of the observation effort in the probability of really observing the specie. We consider an uniform distribution of the effort bounded between 1 and 25. In the real data set, the effort follow a normal distibution centered around 8 with min and max of (~0.5 ; ~ 20).</p>
+<p>Here his an example of the data used to run the model :</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>$N
+[1] 200
+
+$y
+  [1] 1 1 0 1 0 1 1 1 1 1 1 0 1 0 1 0 0 1 1 0 0 1 1 1 1 0 1 1 1 1 1 1 1 1 0 1 0
+ [38] 1 1 1 1 1 1 1 1 1 1 0 0 1 0 1 1 0 1 1 0 1 1 1 1 1 0 0 1 1 1 1 1 0 1 0 1 1
+ [75] 0 0 0 0 0 0 0 1 0 1 1 1 1 1 0 1 0 0 1 0 1 1 1 0 1 1 1 1 1 1 1 1 1 0 1 1 1
+[112] 0 0 1 1 1 1 0 1 1 1 1 1 1 0 1 0 1 1 1 1 1 1 1 0 0 1 1 1 1 0 1 1 1 1 1 1 0
+[149] 1 1 0 1 1 1 0 1 1 1 0 0 1 1 1 0 0 1 0 0 1 1 1 0 0 1 0 1 1 1 1 1 1 0 1 0 1
+[186] 1 0 1 1 1 0 1 1 1 1 1 1 1 0 1
+
+$effort
+  [1] 18 11  9 11 17 13  7 19  4 11 15 18  8  4  6  3  4 14  7 19  4  8 19 16 23
+ [26] 12 18 21 21  2 20  6  7 23  2 10  6 17 19 18  3  8 19  6  3  7  7  2 20 14
+ [51] 14 24 25 15 18 17 22  9 16 11 12 25 19  8 13 13  4 22 19 11  8  2 15  5  3
+ [76]  4  2  1 22 15  2  5 24 24 13 22 13  8 10 18 18  4 12 25 20  2  6 18 23 22
+[101]  5  6 14 12 10 22 12  4 16 17 11 19  4 25  5  6 18  1 21 16  7 11 18  7 23
+[126]  6 10 13 19 18 18 10  3  7 15  3 19  3 19  9 20 15 18 24 12 19 23 10 18 19
+[151] 24 22 22 13 17 12 24 21 24  3 11 13  5  2  5 23  3 20 22 24 23 23 17 12 18
+[176] 11 25 18 16  7  7  8 10  5 13 19  3 17 24 23 20 16  2 21 12  3  5 15  3 22
+
+$.join_data
+$.join_data$prob_pres
+[1] 0.7
+
+$.join_data$prob_detect
+[1] 0.3</code></pre>
+</div>
+</div>
+<section id="simulation-results" class="level3 page-columns page-full" data-number="1.1.1">
+<h3 data-number="1.1.1" class="anchored" data-anchor-id="simulation-results"><span class="header-section-number">1.1.1</span> Simulation results</h3>
+<p>From there we ran a Bayesian model (8 batches, 4 reps) and compare the distribution of the posteriors with the real parameters. First, we ask what percentage of the posterior don’t have the real parameters values in their 95% quantile.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 2
+  variable    coverage
+  &lt;chr&gt;          &lt;dbl&gt;
+1 prob_detect    1    
+2 prob_pres      0.975</code></pre>
+</div>
+</div>
+<p>Then we check the distribution of the mean of the posteriors</p>
+<div class="cell column-page quarto-layout-panel">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-4-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="simple-stan-model-for-a-varying-set-of-parameters" class="level2 page-columns page-full" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="simple-stan-model-for-a-varying-set-of-parameters"><span class="header-section-number">1.2</span> Simple Stan model for a varying set of parameters</h2>
+<p>Here, we ran each simulation with a different set of parameters. We aim to see if the model is robust for all the parameters value possible. The structure of the data is the same as for the static simulation.</p>
+<p>The probability distributions of the parameters look like:</p>
+<p><strong>Detection</strong></p>
+<p>We expect the detection to be centered lower that 0.5 as most species are not systematly detected on each observation. It’s is less probable that as species has a probability of detection very close to zero (we would not see it often).</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p><strong>Presence</strong></p>
+<p>We test for mean value of presence as we expect that in a data set that ignore time, about half of the observations will fall outside the presence period of the species.</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<section id="simulation-results-1" class="level3 page-columns page-full" data-number="1.2.1">
+<h3 data-number="1.2.1" class="anchored" data-anchor-id="simulation-results-1"><span class="header-section-number">1.2.1</span> Simulation results</h3>
+<p>From there we ran a Bayesian model (16 batches, 4 reps) and compare the distribution of the posteriors with the real parameters. First, we ask what percentage of the posterior have the real parameters values in their 95% quantile.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 2
+  variable    coverage
+  &lt;chr&gt;          &lt;dbl&gt;
+1 prob_detect    0.975
+2 prob_pres      0.975</code></pre>
+</div>
+</div>
+<p>Then we check the correlation with the mean of the posterior with the true parameter value on a 1:1 plot</p>
+<div class="cell column-page quarto-layout-panel">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-8-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="occupancy-model-that-considers-time" class="level1 page-columns page-full" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Occupancy model that considers time</h1>
+<p>We build on the preceding model structure to add variation in the presence of the species with time. As we follow migrant species onsite, we expect to detect the arrival and departure of the species in the data. To account for that, we modify the <span class="math inline">\(P\)</span> so that :</p>
+<p><span class="math display">\[
+\begin{align}
+p = \frac{1}{1 + e^{-a_1(t - b_1)}} * \frac{1}{1 + e^{a_2(t - b_2)}}
+\end{align}
+\]</span></p>
+<p>Here is an exemple of the probability distribution obtained through time for given parameters value :</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Setting parameter values</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>a1 <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>a2 <span class="ot">&lt;-</span> <span class="fl">0.2</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>b1 <span class="ot">&lt;-</span> <span class="dv">125</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>b2 <span class="ot">&lt;-</span> <span class="dv">235</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<section id="simple-stan-model-for-static-set-of-parameters" class="level2 page-columns page-full" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="simple-stan-model-for-static-set-of-parameters"><span class="header-section-number">2.1</span> Simple Stan model for static set of parameters</h2>
+<p>Parameters: d = 0.3 a1 = 1 a2 = 0.2 b1 = 160 b1 = 200</p>
+<p>We create a fake data se with fixed parameters. We consider an uniform distribution of the observation dates between jj 130 and 240. In the real data set, the date follow a normal distribution centered around jj 180 (min 130 and max 240).</p>
+<p>Here is an example of the data used to run the model:</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>$N
+[1] 200
+
+$y
+  [1] 0 1 1 1 0 0 1 0 0 1 0 0 1 1 0 0 1 0 1 0 0 0 1 0 0 0 0 0 1 0 1 1 0 0 0 1 0
+ [38] 0 1 0 0 1 0 1 1 0 1 0 0 0 0 0 0 1 0 0 0 1 1 0 0 0 1 0 0 0 0 0 0 1 1 0 1 0
+ [75] 0 0 0 1 0 0 0 1 0 1 1 0 0 0 0 1 1 0 0 0 1 1 0 1 0 0 0 1 0 0 0 0 1 0 0 0 0
+[112] 0 0 0 0 1 0 0 0 0 0 0 1 0 1 1 1 0 1 0 1 1 1 0 1 0 0 1 0 1 0 0 1 0 1 1 1 0
+[149] 0 0 1 0 0 0 0 0 0 1 1 0 1 1 0 1 0 1 0 0 0 0 0 1 0 0 0 1 1 0 1 0 1 1 0 0 1
+[186] 0 0 0 0 0 0 1 0 0 1 0 0 0 0 0
+
+$jj_date
+  [1] 130 190 207 167 199 156 198 232 209 174 194 219 182 167 237 221 206 138
+ [19] 201 191 202 131 187 138 196 233 207 234 189 160 195 176 141 229 229 167
+ [37] 226 135 194 141 197 170 218 165 166 211 188 150 218 152 157 194 137 169
+ [55] 153 235 235 185 194 143 238 149 165 189 226 133 200 232 146 173 200 135
+ [73] 174 138 225 146 148 199 235 153 157 180 157 193 200 188 192 149 132 187
+ [91] 211 204 239 211 189 201 233 190 145 210 136 168 195 169 154 143 165 226
+[109] 148 197 211 200 140 145 136 164 232 152 231 157 226 216 166 136 192 174
+[127] 199 131 186 235 189 189 180 230 168 132 138 197 211 187 144 147 177 228
+[145] 176 165 185 187 221 142 159 237 200 153 216 222 164 187 184 142 158 162
+[163] 195 190 143 172 191 170 148 215 224 189 134 162 229 209 190 201 173 231
+[181] 160 178 130 161 162 158 136 154 152 204 141 178 223 131 176 151 137 159
+[199] 148 142
+
+$effort
+  [1] 22  8  8 17 13 11 19 24 18  6 12 10 13  6 10  7 21 14  7  1 24 15 12  7 24
+ [26] 21 12 16 15 22 14 11  4 14  5  8 14  7 14  1  3 15 16  2  6 13 11 14 22  9
+ [51] 14 18  8  8  9 24 11 18 20 10 18 19 22  5 10 11 22 18 17  6 16  2 14 19  5
+ [76] 23 17 21 18 11  9 17 14  4  5  2 18 13 25 12  7 24 22  7  8 13  3  7  2  3
+[101]  9 17  2  3  9 15  8 11 25 10 16 11 11 23 19 24 19  4  5 11 13  9 24  2  3
+[126] 18 16 15 12 15 23 10 18 11 18 24  6 15 23 13 17  5 10 25 17 19  9 18  6 17
+[151] 24 23 10 23  1 22  2 13 25 16 21 13 13 24 13 20 20  1 13  9  9 18 23  1 23
+[176]  8 24  3 25 24 17 16 19 16 20  9 13  5  7 15 10 23  3  6  8  5 15 21  6  7
+
+$.join_data
+$.join_data$prob_detect
+[1] 0.3
+
+$.join_data$log_a1
+[1] 0
+
+$.join_data$log_a2
+[1] -1.609438
+
+$.join_data$b1
+[1] 160
+
+$.join_data$b2
+[1] 200</code></pre>
+</div>
+</div>
+<section id="small-detour-on-log-scale" class="level3" data-number="2.1.1">
+<h3 data-number="2.1.1" class="anchored" data-anchor-id="small-detour-on-log-scale"><span class="header-section-number">2.1.1</span> Small detour on log scale</h3>
+<p>We change the general equation so that the <span class="math inline">\(a_1\)</span> and <span class="math inline">\(a_2\)</span> parameters are set on the log scale (so in the equation it becomes <span class="math inline">\(exp(a_1)\)</span>). We do this because it makes the sampling easier. The <span class="math inline">\(a\)</span> parameters is bounded between 0 and infinite, but starting at a value of 1, the slope of the curvature of the function tend toward a “step”. Thus, sampling the parameters on the log scale allows more “weight” on those values below 1, while still allowing the sampling of higher value.</p>
+<p>Our priors become:</p>
+<p>log_a1 ~ normal(1.5, 2)</p>
+<p>log_a2 ~ normal(1.5, 2)</p>
+</section>
+<section id="simulation-results-2" class="level3 page-columns page-full" data-number="2.1.2">
+<h3 data-number="2.1.2" class="anchored" data-anchor-id="simulation-results-2"><span class="header-section-number">2.1.2</span> Simulation results</h3>
+<p>From there we ran a Bayesian model (8 batches, 5 reps) and compare the distribution of the posteriors with the real parameters. First, we ask what percentage of the posterior don’t have the real parameters values in their 95% quantile.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 2
+  variable    coverage
+  &lt;chr&gt;          &lt;dbl&gt;
+1 b1             0.95 
+2 b2             0.95 
+3 log_a1         1    
+4 log_a2         0.875
+5 prob_detect    0.975</code></pre>
+</div>
+</div>
+<p>Then we check the distribution of the mean of the posteriors</p>
+<div class="cell column-page quarto-layout-panel">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-13-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-13-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-13-4.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-13-5.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="simple-stan-model-for-varying-set-of-parameters" class="level2 page-columns page-full" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="simple-stan-model-for-varying-set-of-parameters"><span class="header-section-number">2.2</span> Simple Stan model for varying set of parameters</h2>
+<p>In this simulation, we sample a different set of parameters each time we run the model. The <span style="color:red;"><strong>arrival date <span class="math inline">\(b_1\)</span></strong></span> is normally distributed around jj 150 and the <span style="color:blue;"><strong>departure date <span class="math inline">\(b_1\)</span></strong></span> is distributed around 220. Both have an sd of 7.</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>The structure of the data and the model is the same than with the fixed parameter analysis.</p>
+<section id="simulation-results-3" class="level3 page-columns page-full" data-number="2.2.1">
+<h3 data-number="2.2.1" class="anchored" data-anchor-id="simulation-results-3"><span class="header-section-number">2.2.1</span> Simulation results</h3>
+<p>We run ran a Bayesian model (x batches, y reps) and compared the distribution of the posteriors with the real parameters. As before, we first look at the percentage of the posterior that include the real parameter in their 95% quantile.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 2
+  variable    coverage
+  &lt;chr&gt;          &lt;dbl&gt;
+1 b1             0.975
+2 b2             0.975
+3 log_a1         0.95 
+4 log_a2         1    
+5 prob_detect    1    </code></pre>
+</div>
+</div>
+<p>Then we check the correlation with the mean of the posterior and the true parameters value with a 1:1 plot.</p>
+<div class="cell column-page quarto-layout-panel">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-16-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-16-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-16-4.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-16-5.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="testing-our-occupancy-model-with-adequate-distributions" class="level1 page-columns page-full" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Testing our occupancy model with adequate distributions</h1>
+<p>For now, we used mostly uniformly distributed data for effort and date. However, in the data set, the distributions of both of these variables are NOT uniform across the range. Thus, we will test our model with generated date with the appropriate distribution of these variable.</p>
+<section id="effort" class="level2 page-columns page-full" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="effort"><span class="header-section-number">3.1</span> Effort</h2>
+<p>Here is the distribution of efforts in the data :</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+  0.000   4.000   6.000   6.339   8.000  40.000     325 </code></pre>
+</div>
+</div>
+<p>We will adapt our data-generating function to best approximate this distribution. We will use a normal distribution with a mean of 6 and a sd of 2.5. Such pdf looks like :</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Once the sampling is changed, we ran the model and look at the fit between the mean of the posterior and the real value.</p>
+<div class="cell column-page quarto-layout-panel">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-19-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-19-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-19-4.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-19-5.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</div>
+</section>
+<section id="date" class="level2 page-columns page-full" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="date"><span class="header-section-number">3.2</span> Date</h2>
+<p>Here is the distribution of dates in the data :</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-20-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  132.0   168.0   178.0   179.6   189.0   232.0 </code></pre>
+</div>
+</div>
+<p>As with the effort, we change the distribution of date in our data-generating function to best approximate the distribution in the data. We use a normal distribution with a mean of 180 and a sd of 15. The pdf looks like:</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-21-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Once the sampling is changed, we ran the model and look at the fit between the mean of the posterior and the real value.</p>
+<div class="cell column-page quarto-layout-panel">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-22-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-22-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-22-4.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-22-5.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="testing-our-occupancy-model-with-data" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Testing our occupancy model with data</h1>
+<p>Data on Long-tailed Duck</p>
+<p>Now we test our Bayesian framework on our real observation data. For this test, we select the data of the Long-tailed Duck as it is rather easy to observe, distributed almost everywhere on the island and should have an arrival and departure date within the observation period.</p>
+<p>First, we illustrate the data :</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Then we run the model and extract the distribution of the posteriors :</p>
+<div class="cell quarto-layout-panel">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-24-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-24-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-24-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-24-4.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-24-5.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We can then extract the mean parameters and plot the predicted curve of presence :</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>    variable     mean   median   sd  mad       q5      q95 rhat ess_bulk
+ lp__        -1868.36 -1868.04 1.60 1.44 -1871.45 -1866.41 1.00     1700
+ prob_detect     0.53     0.53 0.05 0.05     0.45     0.62 1.00     2750
+ log_a1         -1.19    -1.19 0.08 0.08    -1.32    -1.05 1.00     2764
+ log_a2         -2.73    -2.72 0.07 0.07    -2.85    -2.61 1.00     2365
+ b1            162.20   162.20 0.36 0.36   161.62   162.78 1.00     3233
+ b2            202.70   202.62 1.28 1.27   200.72   204.90 1.00     2364
+ ess_tail
+     2302
+     2134
+     2562
+     2481
+     2722
+     2101</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>a1 <span class="ot">=</span> <span class="sc">-</span><span class="fl">1.19</span> </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>a2 <span class="ot">=</span> <span class="sc">-</span><span class="fl">2.73</span> </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>b1 <span class="ot">=</span> <span class="fl">162.2</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>b2 <span class="ot">=</span> <span class="fl">202.7</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"y"</span> <span class="ot">=</span> duck_data<span class="sc">$</span>y,</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">"jj_date"</span> <span class="ot">=</span> duck_data<span class="sc">$</span>jj_date,</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">"effort"</span> <span class="ot">=</span> duck_data<span class="sc">$</span>effort</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">effort_scale =</span> effort<span class="sc">/</span><span class="fu">max</span>(effort)) <span class="sc">|&gt;</span> </span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> jj_date, <span class="at">y =</span> y)) <span class="sc">+</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_jitter</span>(<span class="at">height =</span> <span class="fl">0.35</span>, <span class="fu">aes</span>(<span class="at">alpha =</span> effort_scale)) <span class="sc">+</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>()  <span class="sc">+</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_function</span>(</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">fun =</span> <span class="cf">function</span>(x)</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>      (<span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="fu">exp</span>(a1) <span class="sc">*</span> (</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        x <span class="sc">-</span> b1</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>      )))) <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="fu">exp</span>(a2) <span class="sc">*</span> (</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>        x <span class="sc">-</span> b2</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>      )))),</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"red"</span>,</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">lwd =</span> <span class="fl">1.5</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div style="text-align: center;">
+<p>** <strong>TODO</strong> **</p>
+</div>
+<ul class="task-list">
+<li><input type="checkbox" disabled="" checked="">Understand why the model with presence ~ time does not seems to fit very well</li>
+<li><input type="checkbox" disabled="" checked="">Run the model with presence parameters varying at each simulation</li>
+<li><input type="checkbox" disabled="" checked="">Build the 1:1 graph for the mean of the posterior vs real parameters</li>
+<li><input type="checkbox" disabled="">Run a model for the Long-tailed Duck data all year combined</li>
+<li><input type="checkbox" disabled="">Illustrate the model like in https://mc-stan.org/bayesplot/articles/plotting-mcmc-draws.html</li>
+<li><input type="checkbox" disabled="">Run a model for the Long-tailed Duck with parameter varying each year</li>
+</ul>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

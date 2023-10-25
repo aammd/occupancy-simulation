@@ -1,53 +1,53 @@
 library(targets)
 library(stantargets)
-library(dplyr)
-library(stantargets)
-# This is an example _targets.R file. Every
-# {targets} pipeline needs one.
-# Use tar_script() to create _targets.R and tar_edit()
-# to open it again for editing.
-# Then, run tar_make() to run the pipeline
-# and tar_read(summary) to view the results.
+library(tarchetypes)
+library(quarto)
 
 # Define custom functions and other global objects.
-# This is where you write source(\"R/functions.R\")
-# if you keep your functions in external scripts.
 source("functions.R")
 tar_option_set(seed = 3)
 
 # Set target-specific options such as packages.
 tar_option_set(packages = c("dplyr", "ggplot2"))
 
-# data_values <- expand.grid(
-#   n_per_group = c(1, 3, 5, 10, 15),
-#   J = c(3, 10, 20)) |>
-#   mutate(sim_id = paste0("sim", 1:length(n_per_group)))
-
 # End this file with a list of target objects.
 list(
+  tar_target(
+    fake_data,
+    head(simulate_occ_effort(prob_pres = .7,
+                             prob_detect = .3,
+                             nsample = 200
+    ))
+  ),
   tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values
     simple_occ,
     stan_files = "simple_occ.stan",
-    batches = 4,
-    reps = 3,
-    data = simulate_occ_effort(prob_pres = .7, 
-                               prob_detect = .3, 
+    batches = 8,
+    reps = 5,
+    data = simulate_occ_effort(prob_pres = .7,
+                               prob_detect = .3,
                                nsample = 200),
     variables = c("prob_pres", "prob_detect"),
     summaries = list(
-      ~posterior::quantile2(.x, probs = c(0.025, 0.975))
+      ~posterior::quantile2(.x, probs = c(0.025, 0.975)),
+      mean = ~mean(.x)
     ),
     quiet = TRUE
+  ),
+  tar_target( # Evaluate the coverage of the posterior. What % of time the true parameters falls within the posterior interval
+    cov_params,
+    command = calc_coverage(simple_occ)
   ),
   tar_stan_mcmc_rep_summary( # Run models on multiples data sets with uniformly sample parameter values
     vary_params,
     stan_files = "simple_occ.stan",
-    batches = 8,
+    batches = 16,
     reps = 5,
     data = simulate_occ_eff_params(nsample = 200),
     variables = c("prob_pres", "prob_detect"),
     summaries = list(
-      ~posterior::quantile2(.x, probs = c(0.025, 0.975)) # Extract the quantile interval of the posterior distributions
+      ~posterior::quantile2(.x, probs = c(0.025, 0.975)), # Extract the quantile interval of the posterior distributions
+      mean = ~mean(.x)
     ),
     quiet = TRUE,
     refresh = 0L,
@@ -57,15 +57,30 @@ list(
     cov_vary_params,
     command = calc_coverage(vary_params)
   ),
+  tar_target(
+    fake_data_time,
+    head(simulate_occ_eff_time(log_a1 = log(1),
+                               log_a2 = log(0.2),
+                               b1 = 160,
+                               b2 = 200,
+                               prob_detect = 0.3,
+                               nsample = 200))
+  ),
   tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
     fixed_eff_time,
     stan_files = "occ_eff_time.stan",
-    batches = 5,
-    reps = 4,
-    data = simulate_occ_eff_time(nsample = 200),
+    batches = 8,
+    reps = 5,
+    data = simulate_occ_eff_time(log_a1 = log(1),
+                                 log_a2 = log(0.2),
+                                 b1 = 160,
+                                 b2 = 200,
+                                 prob_detect = 0.3,
+                                 nsample = 200),
     variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2"),
     summaries = list(
-      ~posterior::quantile2(.x, probs = c(0.025, 0.975))
+      ~posterior::quantile2(.x, probs = c(0.025, 0.975)),
+      mean = ~mean(.x)
     ),
     quiet = TRUE,
     refresh = 0L
@@ -74,66 +89,84 @@ list(
     cov_fixed_eff_time,
     command = calc_coverage(fixed_eff_time)
   ),
-  tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
-    fixed_eff_time_log,
-    stan_files = "occ_eff_time_log.stan",
-    batches = 1,
-    reps = 4,
-    data = simulate_occ_eff_time_logscale(nsample = 200),
-    variables = c("logit_prob_detect", "log_a1", "log_a2", "b1", "b2"),
+    tar_stan_mcmc_rep_summary( # Run models on multiples data sets with uniformly sample parameter values, but presence fct of time
+    vary_eff_time,
+    stan_files = "occ_eff_time.stan",
+    batches = 8,
+    reps = 5,
+    data = simulate_occ_eff_time_param(nsample = 200),
+    variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2"),
     summaries = list(
-      ~posterior::quantile2(.x, probs = c(0.025, 0.975))
+      ~posterior::quantile2(.x, probs = c(0.025, 0.975)),
+      mean = ~mean(.x)
     ),
     quiet = TRUE,
-    refresh = 0L
+    refresh = 0L,
+    parallel_chains = 4
+  ),
+  tar_target( # Evaluate the coverage of the posterior. What % of time the true parameters falls within the posterior interval
+    cov_vary_time_params,
+    command = calc_coverage(vary_eff_time)
   ),
   tar_target(
-    cov_fixed_eff_time_log,
-    command = calc_coverage(fixed_eff_time_log)
-  )
-  # tar_stan_mcmc_rep_summary(
-  #   somegroup, stan_files = "some_groups.stan",
-  #   batches = 4,
-  #   reps = 3,
-  #   data = simulate_normal_group(n_per_group = 3, J = 10),
-  #   quiet = TRUE
-  # ),
-  # tar_target(
-  #   name = no_groups,
-  #   command = cmdstanr::cmdstan_model(stan_file = "no_groups.stan")
-  # ),
-  # tar_target(
-  #   name = some_groups,
-  #   command = cmdstanr::cmdstan_model(stan_file = "some_groups.stan")
-  # ),
-  # tar_stan_mcmc(
-  #   demo_groups,
-  #   stan_files = "some_groups.stan",
-  #   data = simulate_normal_group(n_per_group = 10, J = 10),
-  #   quiet = TRUE
-  # ),
-  # tarchetypes::tar_map_rep(
-  #   increase_group_reps,
-  #   command = compare_two_models_loo(
-  #     model1 = no_groups,
-  #     model2 = some_groups,
-  #     names = c("no_groups", "some_groups"),
-  #     n_per_group = n_per_group, J = J),
-  #   values = data_values,
-  #   batches = 2,
+    obs_data,
+    command = source(file = "load_data.R")
+  ),
+  tar_stan_mcmc_rep_summary( # Run models on multiples data sets with uniformly sample parameter values, but presence fct of time
+    vary_effN_time,
+    stan_files = "occ_eff_time.stan",
+    batches = 8,
+    reps = 5,
+    data = simulate_occ_effN_time_param(nsample = 200),
+    variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2"),
+    summaries = list(
+      ~posterior::quantile2(.x, probs = c(0.025, 0.975)),
+      mean = ~mean(.x)
+    ),
+    quiet = TRUE,
+    refresh = 0L,
+    parallel_chains = 4
+  ),
+  tar_stan_mcmc_rep_summary( # Run models on multiples data sets with uniformly sample parameter values, but presence fct of time
+    vary_effN_timeN,
+    stan_files = "occ_eff_time.stan",
+    batches = 8,
+    reps = 5,
+    data = simulate_occ_effN_timeN_param(nsample = 200),
+    variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2"),
+    summaries = list(
+      ~posterior::quantile2(.x, probs = c(0.025, 0.975)),
+      mean = ~mean(.x)
+    ),
+    quiet = TRUE,
+    refresh = 0L,
+    parallel_chains = 4
+  ),
+  tar_target(
+    duck_data,
+    command = load_duck(data = obs_data)
+  ),
+  tar_target(
+    duck_fixed_year,
+    command = stan_duck(duck_data)
+  ),
+  # tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
+  #   fixed_eff_time_log,
+  #   stan_files = "occ_eff_time_log.stan",
+  #   batches = 1,
   #   reps = 4,
-  #   names = tidyselect::any_of("scenario")
+  #   data = simulate_occ_eff_time_logscale(nsample = 200),
+  #   variables = c("logit_prob_detect", "log_a1", "log_a2", "b1", "b2"),
+  #   summaries = list(
+  #     ~posterior::quantile2(.x, probs = c(0.025, 0.975))
+  #   ),
+  #   quiet = TRUE,
+  #   refresh = 0L
   # ),
   # tar_target(
-  #   power_fig,
-  #   command = increase_group_reps |>
-  #     filter(model == "no_groups") |>
-  #     ggplot(aes(x = n_per_group, y = elpd_diff)) + geom_point() +
-  #     facet_wrap(~J)
-  # ),
-  # tarchetypes::tar_render(
-  #   readme,
-  #   path = "README.Rmd"
+  #   cov_fixed_eff_time_log,
+  #   command = calc_coverage(fixed_eff_time_log)
   # )
+  tar_quarto(report, "occupancy_STAN.qmd")
 )
 

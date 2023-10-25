@@ -20,11 +20,10 @@ parameters {
 // and standard deviation 'sigma'.
 model {
   prob_detect ~ beta(2, 5);
-  log_a1 ~ normal(-2, .2);
-  log_a2 ~ normal(-2, .2);
+  log_a1 ~ normal(-1, 1);
+  log_a2 ~ normal(-1, 1);
   b1 ~ normal(150, 7);
-  b2 ~ normal(220, 7);
-  y ~ bernoulli((1 - (1 - prob_detect)^effort) .* ((1 / (1 + exp(-exp(log_a1) * (jj_date - b1)))) .* (1 / (1 + exp(exp(log_a2) * (jj_date - b2))))));
+  b2 ~ normal(210, 7);
+  y ~ bernoulli((1 - (1 - prob_detect)^effort) .* (1 / (1 + exp(-exp(log_a1) .* (jj_date - b1))) .* (1 / (1 + exp(exp(log_a2) .* (jj_date - b2))))));
 }
 
-// inv_logit(-exp(log_a1) * (jj_date - b1))

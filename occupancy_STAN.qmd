@@ -10,26 +10,28 @@ toc: true
 toc-location: left
 number-sections: true
 number-depth: 3
-bibliography: references.bib
 comments:
   hypothesis: true
 editor_options: 
   chunk_output_type: inline
-execute:
-  cache: false
 ---
 
 
 ```{r setup, eval=TRUE, message=FALSE, warning=FALSE}
-# library(targets)
+#| echo: false
+
 library(ggplot2)
 library(tidyverse)
-# library(tidybayes)
+library(targets)
+library(stantargets)
+
+options(tidyverse.quiet = TRUE)
+
 set.seed(2)
 ```
 
 
-## Occupancy models
+# Very simple occupancy model that controls for effort
 
 We begin with a simple occupancy model where the probability of observing a presence ($P$) is a Bernoulli process described by $w$ the probability of observation and $p$ the probability of a true presence. 
 
@@ -41,13 +43,20 @@ logit(p) &= \alpha \\
 logit(d) &= \beta \\\\
 \alpha &\sim \text{N}(-1, 0.5) \\
 \beta &\sim \text{N}(0, 0.5) \\\\
-effort &= \text{Nb observers} + \text{Nb hours} 
+effort &= \text{Nb observers} * \text{Nb hours} 
 \end{align}
 $$
 
-## Very simple occupancy model that controls for effort
+The curve of the effect of effort on probability of observation looks like this (here for d = 0.3)
 
-The probability of observing a presence ($y = 1$) is the product of the probability of observing the specie and the probability that the specie is really there. The probability of not observing a presence is than the probability of missing the species while it is present AND the probability that the specie is absent. 
+```{r}
+#| echo: false
+
+curve(1 - (1 - 0.3)^x, xlim = c(0, 25), xlab = "Number of effort unit", ylab = "probability of observation")
+abline(v = 1, h = 0.3, lty = 2)
+```
+
+The probability of observing a presence ($y = 1$) is the product of the probability of observing the specie and the probability that the specie is really there. The probability of not observing a presence is the probability of missing the species while it is present AND the probability that the specie is absent. 
 
 
 $$
@@ -58,51 +67,644 @@ y = 0, & (1-w)p + 1 - p
 \end{cases}
 $$
 
-
-## Simple Stan model
+## Simple Stan model for a static set of parameters
 
 Parameters:
 p = 0.7
 d = 0.3
+
+
+We create a fake data set in which we consider the effect of the observation effort in the probability of really observing the specie. We consider an uniform distribution of the effort bounded between 1 and 25. In the real data set, the effort follow a normal distibution centered around 8 with min and max of (~0.5 ; ~ 20).
+
+Here his an example of the data used to run the model :
 ```{r}
 #| echo: false
 
-p = 0.7
-d = 0.3
-
-curve(1 - (1 - d)^x, xlim = c(0, 25), xlab = "Number of effort unit", ylab = "probability of observation")
-abline(v = 1, h = d, lty = 2)
-```
-
-Création d'un faux jeux de données + distribution des observations de détection (y = 1) lorsqu'il y a une vraie présence (real_pres = 1)
-```{r}
-fake_data <- tibble(sample_id = 1:200,
-                    real_pres = rbinom(n = length(sample_id),
-                                       p = p,
-                                       size = 1),
-                    effort = round(
-                      runif(
-                        n = length(sample_id),
-                        min = 1, max = 25)
-                    )) |>
-  rowwise() |> 
-  mutate(pa = 1 - (1 - d)^effort,
-         y = rbinom(n = 1, p = pa, size = 1) * real_pres)
-
+tar_load(fake_data)
 fake_data
+```
+### Simulation results
+From there we ran a Bayesian model (8 batches, 4 reps) and compare the distribution of the posteriors with the real parameters. 
+First, we ask what percentage of the posterior don't have the real parameters values in their 95% quantile.
 
-fake_data |> 
-  mutate(y = as.factor(y)) |> 
-  filter(real_pres == 1) |> 
-  ggplot(aes(x = y, y = effort)) + 
-  geom_violin() +
-  geom_dotplot(binaxis = 'y', stackdir = 'center', dotsize = 0.5) + 
-  coord_flip() + theme_classic()
+```{r}
+#| echo: false
+
+tar_load(cov_params)
+cov_params
+```
+
+Then we check the distribution of the mean of the posteriors
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| column: page
+#| warning: false
+
+tar_load(simple_occ)
+
+simple_occ |>
+  filter(variable == "prob_detect") |>
+  ggplot(aes(x = mean)) +
+  geom_histogram() +
+  geom_vline(xintercept = unique(0.3)) +
+  ggtitle("Probability of detection") +
+  xlim(0, 1)
+
+simple_occ |>
+  filter(variable == "prob_pres") |>
+  ggplot(aes(x = mean)) +
+  geom_histogram() +
+  geom_vline(xintercept = unique(0.7)) +
+  ggtitle("Probability of presence") +
+  xlim(0, 1)
+
+```
+
+
+## Simple Stan model for a varying set of parameters
+
+Here, we ran each simulation with a different set of parameters. We aim to see if the model is robust for all the parameters value possible. The structure of the data is the same as for the static simulation.
+
+The probability distributions of the parameters look like:
+
+**Detection**
+
+We expect the detection to be centered lower that 0.5 as most species are not systematly detected on each observation. It's is less probable that as species has a probability of detection very close to zero (we would not see it often).
+```{r}
+#| echo: false
+#| fig-height: 4
+x <- seq(0, 1, length.out = 100)
+
+plot(dbeta(x, 2, 5) ~ x, type = "l",
+     ylab = "density", xlab = "param value")
+```
+
+**Presence**
+
+We test for mean value of presence as we expect that in a data set that ignore time, about half of the observations will fall outside the presence period of the species.
+```{r}
+#| echo: false
+#| fig-height: 4
+plot(dbeta(x, 2, 2) ~ x, type = "l",
+     ylab = "density", xlab = "param value")
+```
+
+### Simulation results
+
+From there we ran a Bayesian model (16 batches, 4 reps) and compare the distribution of the posteriors with the real parameters. 
+First, we ask what percentage of the posterior have the real parameters values in their 95% quantile.
+
+```{r}
+#| echo: false
+
+tar_load(cov_vary_params)
+cov_vary_params
+```
+
+Then we check the correlation with the mean of the posterior with the true parameter value on a 1:1 plot
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| column: page
+#| warning: false
+
+tar_load(vary_params)
+
+vary_params |>
+  filter(variable == "prob_detect") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("Probability of detection") +
+  xlim(0, 0.75) + ylim(0, 0.75)
+
+vary_params |>
+  filter(variable == "prob_pres") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("Probability of presence") +
+  xlim(0, 1) + ylim(0, 1)
+```
+
+# Occupancy model that considers time
+
+We build on the preceding model structure to add variation in the presence of the species with time. As we follow migrant species onsite, we expect to detect the arrival and departure of the species in the data. To account for that, we modify the $P$ so that :
+
+$$
+\begin{align}
+p = \frac{1}{1 + e^{-a_1(t - b_1)}} * \frac{1}{1 + e^{a_2(t - b_2)}} 
+\end{align}
+$$
+
+Here is an exemple of the probability distribution obtained through time for given parameters value :
+```{r}
+# Setting parameter values
+a1 <- 1
+a2 <- 0.2
+b1 <- 125
+b2 <- 235
+
+```
+
+```{r}
+#| echo: false
+Hlogist <- function(x, a1, a2, b1, b2) ((1 / (1 +  exp(-a1 * (x - b1)))) * 1 / (1 +  exp(a2 * (x - b2))))
+
+curve(Hlogist(x, a1, a2, b1, b2), xlim = c(110, 270), 
+      lwd = 2,
+      ylab = "p(x)",
+      xlab = "julian date")
+abline(v = c(b1, b2), lty = 2)
+
+```
+
+## Simple Stan model for static set of parameters
+
+Parameters: 
+d = 0.3
+a1 = 1
+a2 = 0.2
+b1 = 160
+b1 = 200
+
+We create a fake data se with fixed parameters. We consider an uniform distribution of the observation dates between jj 130 and 240. In the real data set, the date follow a normal distribution centered around jj 180 (min 130 and max 240).
+
+Here is an example of the data used to run the model: 
+
+```{r}
+#| echo: false
+
+tar_load(fake_data_time)
+fake_data_time
+```
+
+### Small detour on log scale
+
+We change the general equation so that the $a_1$ and $a_2$ parameters are set on the log scale (so in the equation it becomes $exp(a_1)$). We do this because it makes the sampling easier. The $a$ parameters is bounded between 0 and infinite, but starting at a value of 1, the slope of the curvature of the function tend toward a "step". Thus, sampling the parameters on the log scale allows more "weight" on those values below 1, while still allowing the sampling of higher value.
+
+Our priors become: 
+
+log_a1 ~ normal(1.5, 2)
+
+log_a2 ~ normal(1.5, 2)
+
+### Simulation results
+
+From there we ran a Bayesian model (8 batches, 5 reps) and compare the distribution of the posteriors with the real parameters. 
+First, we ask what percentage of the posterior don't have the real parameters values in their 95% quantile.
+
+```{r}
+#| echo: false
+
+tar_load(cov_fixed_eff_time)
+cov_fixed_eff_time
+```
+
+Then we check the distribution of the mean of the posteriors
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| column: page
+#| warning: false
+
+tar_load(fixed_eff_time)
+
+fixed_eff_time |>
+  filter(variable == "prob_detect") |>
+  ggplot(aes(x = mean)) +
+  geom_histogram() +
+  geom_vline(xintercept = unique(0.3)) +
+  ggtitle("Probability of detection") +
+  xlim(0, 1)
+
+fixed_eff_time |>
+  filter(variable == "log_a1") |>
+  ggplot(aes(x = mean)) +
+  geom_histogram() +
+  geom_vline(xintercept = log(1)) +
+  ggtitle("log_a1") +
+  xlim(-2, 2)
+
+fixed_eff_time |>
+  filter(variable == "log_a2") |>
+  ggplot(aes(x = mean)) +
+  geom_histogram() +
+  geom_vline(xintercept = log(0.2)) +
+  ggtitle("log_a2") +
+  xlim(-3, 1)
+
+fixed_eff_time |>
+  filter(variable == "b1") |>
+  ggplot(aes(x = mean)) +
+  geom_histogram() +
+  geom_vline(xintercept = 160) +
+  ggtitle("b1") +
+  xlim(100, 200)
+
+fixed_eff_time |>
+  filter(variable == "b2") |>
+  ggplot(aes(x = mean)) +
+  geom_histogram() +
+  geom_vline(xintercept = 200) +
+  ggtitle("b2") +
+  xlim(150, 250)
+
+```
+
+
+## Simple Stan model for varying set of parameters
+
+
+In this simulation, we sample a different set of parameters each time we run the model. The <span style="color:red;">**arrival date $b_1$**</span> is normally distributed around jj 150 and the <span style="color:blue;">**departure date $b_1$**</span> is distributed around 220. Both have an sd of 7. 
+
+```{r}
+#| echo: false
+#| fig-height: 4
+x1 <- seq(120, 180, length.out = 100)
+x2 <- seq(190, 250, length.out = 100)
+
+plot(
+  dnorm(x1, 150, 7) ~ x1,
+  type = "l",
+  ylab = "density",
+  xlab = "jj date",
+  col = "red",
+  xlim = c(120, 250),
+  lwd = 2
+)
+lines(
+  dnorm(x2, 220, 7) ~ x2,
+  type = "l",
+  col = "blue",
+  lwd = 2
+)
+```
+
+The structure of the data and the model is the same than with the fixed parameter analysis.
+
+### Simulation results
+
+We run ran a Bayesian model (x batches, y reps) and compared the distribution of the posteriors with the real parameters. As before, we first look at the percentage of the posterior that include the real parameter in their 95% quantile. 
+
+```{r}
+#| echo: false
+
+tar_load(cov_vary_time_params)
+cov_vary_time_params
+```
+
+
+Then we check the correlation with the mean of the posterior and the true parameters value with a 1:1 plot.
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| column: page
+#| warning: false
+
+tar_load(vary_eff_time)
+
+vary_eff_time |>
+  filter(variable == "prob_detect") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("Probability of detection") +
+  xlim(0, 0.75) + ylim(0, 0.75)
+
+vary_eff_time |>
+  filter(variable == "log_a1") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("log a1") +
+  xlim(-3, 1) + ylim(-3, 1)
+
+vary_eff_time |>
+  filter(variable == "log_a2") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("log a2") +
+  xlim(-3, 1) + ylim(-3, 1)
+
+vary_eff_time |>
+  filter(variable == "b1") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("b1") +
+  xlim(120, 180) + ylim(120, 180)
+
+vary_eff_time |>
+  filter(variable == "b2") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("b2") +
+  xlim(195, 240) + ylim(195, 240)
+```
+
+
+# Testing our occupancy model with adequate distributions
+
+For now, we used mostly uniformly distributed data for effort and date. However, in the data set, the distributions of both of these variables are NOT uniform across the range. Thus, we will test our model with generated date with the appropriate distribution of these variable. 
+
+## Effort
+
+Here is the distribution of efforts in the data :
+
+```{r}
+#| echo: false
+#| warning: false
+
+tar_load(obs_data)
+obs_data <- obs_data[[1]]
+
+ggplot(obs_data, aes(x = Nb_field_hours)) +
+  geom_histogram()
+
+summary(obs_data$Nb_field_hours)
+
+```
+
+We will adapt our data-generating function to best approximate this distribution. We will use a normal distribution with a mean of 6 and a sd of 2.5. Such pdf looks like : 
+
+```{r}
+#| echo: false
+
+x <- seq(0, 40, length.out = 100)
+plot(dnorm(x, 6, 2.5) ~ x, type = "l")
+
+```
+
+Once the sampling is changed, we ran the model and look at the fit between the mean of the posterior and the real value.
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| column: page
+#| warning: false
+
+tar_load(vary_effN_time)
+
+vary_effN_time |>
+  filter(variable == "prob_detect") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("Probability of detection") +
+  xlim(0, 0.75) + ylim(0, 0.75)
+
+vary_effN_time |>
+  filter(variable == "log_a1") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("log a1") +
+  xlim(-3, 1) + ylim(-3, 1)
+
+vary_effN_time |>
+  filter(variable == "log_a2") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("log a2") +
+  xlim(-3, 1) + ylim(-3, 1)
+
+vary_effN_time |>
+  filter(variable == "b1") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("b1") +
+  xlim(120, 180) + ylim(120, 180)
+
+vary_effN_time |>
+  filter(variable == "b2") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("b2") +
+  xlim(195, 240) + ylim(195, 240)
+```
+
+
+## Date
+
+Here is the distribution of dates in the data :
+
+```{r}
+#| echo: false
+#| warning: false
+
+ggplot(obs_data, aes(x = Date)) +
+  geom_histogram()
+
+summary(obs_data$Date)
+
+```
+
+As with the effort, we change the distribution of date in our data-generating function to best approximate the distribution in the data. We use a normal distribution with a mean of 180 and a sd of 15. The pdf looks like: 
+```{r}
+#| echo: false
+
+x <- seq(130, 234, length.out = 100)
+plot(dnorm(x, 180, 15) ~ x, type = "l")
+
+```
+
+Once the sampling is changed, we ran the model and look at the fit between the mean of the posterior and the real value.
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| column: page
+#| warning: false
+
+tar_load(vary_effN_timeN)
+
+vary_effN_timeN |>
+  filter(variable == "prob_detect") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("Probability of detection") +
+  xlim(0, 0.75) + ylim(0, 0.75)
+
+vary_effN_timeN |>
+  filter(variable == "log_a1") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("log a1") +
+  xlim(-3, 1) + ylim(-3, 1)
+
+vary_effN_timeN |>
+  filter(variable == "log_a2") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("log a2") +
+  xlim(-3, 1) + ylim(-3, 1)
+
+vary_effN_timeN |>
+  filter(variable == "b1") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("b1") +
+  xlim(120, 180) + ylim(120, 180)
+
+vary_effN_timeN |>
+  filter(variable == "b2") |>
+  ggplot(aes(x = mean, y = .join_data)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype="dashed") +
+  ggtitle("b2") +
+  xlim(195, 240) + ylim(195, 240)
+```
+
+# Testing our occupancy model with data
+
+Data on Long-tailed Duck
+
+Now we test our Bayesian framework on our real observation data. For this test, we select the data of the Long-tailed Duck as it is rather easy to observe, distributed almost everywhere on the island and should have an arrival and departure date within the observation period.
+
+First, we illustrate the data :
+
+```{r}
+#| echo: false
+
+tar_load(duck_data)
+
+data.frame(
+  "y" = duck_data$y,
+  "jj_date" = duck_data$jj_date,
+  "effort" = duck_data$effort
+) |>
+  mutate(effort_scale = effort/max(effort)) |> 
+  ggplot(aes(x = jj_date, y = y)) +
+  geom_jitter(height = 0.35, aes(alpha = effort_scale)) +
+  theme_classic()
+
+
+```
+
+Then we run the model and extract the distribution of the posteriors :
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| warning: false
+
+tar_load(duck_fixed_year)
+
+posterior <- duck_fixed_year[[2]]
+
+bayesplot::mcmc_areas_ridges(
+     posterior, 
+     pars = c("prob_detect"),
+     border_size = 0.75,
+     prob = 0.8, # 80% intervals
+) + xlim(0, 1)
+
+bayesplot::mcmc_areas_ridges(
+     posterior, 
+     pars = c("log_a1"),
+     border_size = 0.75,
+     prob = 0.8, # 80% intervals
+     transformations = list( "log_a1" = "exp")
+) + xlim(0, 0.5)
+
+bayesplot::mcmc_areas_ridges(
+     posterior, 
+     pars = c("log_a2"),
+     border_size = 0.75,
+     prob = 0.8, # 80% intervals
+     transformations = list( "log_a2" = "exp")
+) + xlim(0, 0.5)
+
+bayesplot::mcmc_areas_ridges(
+     posterior, 
+     pars = c("b1"),
+     border_size = 0.75,
+     prob = 0.8, # 80% intervals
+) + xlim(160, 170)
+
+bayesplot::mcmc_areas_ridges(
+     posterior, 
+     pars = c("b2"),
+     border_size = 0.75,
+     prob = 0.8, # 80% intervals
+) + xlim(195,210)
+
 ```
 
 
 ```{r}
-fake_data |> 
-  # mutate(prop = abd/effort) |> 
-  pull(y) |> mean()
+#| echo: false
+#| warning: false
+#| fig-align: center
+
+bayesplot::mcmc_dens_overlay(posterior, 
+                  pars = c("prob_detect", "log_a1", "log_a2", "b1", "b2"), 
+                  transformations = list("log_a2" = "exp", "log_a1" = "exp"))
+
 ```
+We can then extract the mean parameters and plot the predicted curve of presence :
+
+```{r}
+#| echo: false
+
+duck_fixed_year[[1]]
+
+```
+
+```{r}
+
+
+
+a1 = -1.19 
+a2 = -2.73 
+b1 = 162.2
+b2 = 202.7
+
+data.frame(
+  "y" = duck_data$y,
+  "jj_date" = duck_data$jj_date,
+  "effort" = duck_data$effort
+) |>
+  mutate(effort_scale = effort/max(effort)) |> 
+  ggplot(aes(x = jj_date, y = y)) +
+  geom_jitter(height = 0.35, aes(alpha = effort_scale)) +
+  theme_classic()  +
+  stat_function(
+    fun = function(x)
+      (1 / (1 + exp(-exp(a1) * (
+        x - b1
+      )))) * (1 / (1 + exp(exp(a2) * (
+        x - b2
+      )))),
+    color = "red",
+    lwd = 1.5
+  )
+  
+
+```
+
+::: {style="text-align: center;"}
+** **TODO** **
+:::
+
+- [x] Understand why the model with presence ~ time does not seems to fit very well
+- [x] Run the model with presence parameters varying at each simulation
+- [x] Build the 1:1 graph for the mean of the posterior vs real parameters
+- [ ] Run a model for the Long-tailed Duck data all year combined
+- [ ] Illustrate the model like in https://mc-stan.org/bayesplot/articles/plotting-mcmc-draws.html
+- [ ] Run a model for the Long-tailed Duck with parameter varying each year
