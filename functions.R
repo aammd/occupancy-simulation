@@ -130,8 +130,8 @@ simulate_occ_eff_time_param <- function(nsample = 200) {
   
   log_a1 <- rnorm(1, -1, .8)
   log_a2 <- rnorm(1, -1, .8)
-  b1 <- rnorm(1, 150, 7)
-  b2 <- rnorm(1, 210, 7)
+  b1 <- floor(runif(1, 135, 175))
+  b2 <- floor(runif(1, 185, 225))
   
   df_sim <- tibble(sample_id = 1:nsample,
                    jj_date = floor(runif(n = nsample,
@@ -173,8 +173,8 @@ simulate_occ_effN_time_param <- function(nsample = 200) {
   
   log_a1 <- rnorm(1, -1, .8)
   log_a2 <- rnorm(1, -1, .8)
-  b1 <- rnorm(1, 150, 7)
-  b2 <- rnorm(1, 210, 7)
+  b1 <- floor(runif(1, 135, 175))
+  b2 <- floor(runif(1, 185, 225))
   
   df_sim <- tibble(sample_id = 1:nsample,
                    jj_date = floor(runif(n = nsample,
@@ -217,8 +217,8 @@ simulate_occ_effN_timeN_param <- function(nsample = 200) {
   
   log_a1 <- rnorm(1,-1, .8)
   log_a2 <- rnorm(1,-1, .8)
-  b1 <- rnorm(1, 150, 7)
-  b2 <- rnorm(1, 210, 7)
+  b1 <- floor(runif(1, 135, 175))
+  b2 <- floor(runif(1, 185, 225))
   
   df_sim <- tibble(
     sample_id = 1:nsample,
@@ -311,3 +311,64 @@ stan_duck <- function(data) {
 
 } 
 
+
+
+
+# Function to simulate data with :
+# Presence ~ Date
+# B1 ~ Year
+# Detection ~ Effort
+# Fixed parameters values
+simulate_hierarch_b1 <-
+  function(log_a1, log_a2, b2, n.year, prob_detect, nsample = 200) {
+
+    df_sim <- tibble()
+    
+    # Draw a new b1 for each year
+    b1 <- floor(rnorm(n.year, 150, 7))
+    
+    for (i in 1:n.year) {
+      
+      df_year <- tibble(
+        sample_id = 1:nsample,
+        year = 2009 + i,
+        jj_date = floor(runif(
+          n = nsample,
+          min = 130,
+          max = 240
+        )),
+        real_pres = prob_pres_HOF(exp(log_a1),
+                                  exp(log_a2),
+                                  b1[i],
+                                  b2,
+                                  jj_date),
+        effort = round(runif(
+          n = nsample,
+          min = 1, max = 25
+        ))
+      ) |>
+        rowwise() |>
+        mutate(
+          pa = 1 - (1 - prob_detect) ^ effort,
+          y = rbinom(n = 1, p = pa, size = 1) * rbinom(n = 1, p = real_pres, size = 1)
+        )
+      
+      df_sim <- rbind(df_sim, df_year)
+    }
+    
+    list(
+      N = nsample,
+      N.Y = n.year,
+      y = df_sim$y,
+      year = df_sim$year,
+      jj_date = df_sim$jj_date,
+      effort = df_sim$effort,
+      .join_data = list(
+        prob_detect = prob_detect,
+        log_a1 = log_a1,
+        log_a2 = log_a2,
+        b1 = b1,
+        b2 = b2
+      )
+    )
+  }

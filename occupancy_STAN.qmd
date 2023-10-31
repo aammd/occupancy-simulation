@@ -110,7 +110,8 @@ simple_occ |>
   geom_histogram() +
   geom_vline(xintercept = unique(0.3)) +
   ggtitle("Probability of detection") +
-  xlim(0, 1)
+  xlim(0, 1) +
+  theme_classic()
 
 simple_occ |>
   filter(variable == "prob_pres") |>
@@ -118,7 +119,8 @@ simple_occ |>
   geom_histogram() +
   geom_vline(xintercept = unique(0.7)) +
   ggtitle("Probability of presence") +
-  xlim(0, 1)
+  xlim(0, 1) +
+  theme_classic()
 
 ```
 
@@ -175,19 +177,21 @@ tar_load(vary_params)
 
 vary_params |>
   filter(variable == "prob_detect") |>
-  ggplot(aes(x = mean, y = .join_data)) +
+  ggplot(aes(y = mean, x = .join_data)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("Probability of detection") +
-  xlim(0, 0.75) + ylim(0, 0.75)
+  xlim(0, 0.75) + ylim(0, 0.75) +
+  theme_classic()
 
 vary_params |>
   filter(variable == "prob_pres") |>
-  ggplot(aes(x = mean, y = .join_data)) +
+  ggplot(aes(y = mean, x = .join_data)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("Probability of presence") +
-  xlim(0, 1) + ylim(0, 1)
+  xlim(0, 1) + ylim(0, 1) +
+  theme_classic()
 ```
 
 # Occupancy model that considers time
@@ -268,7 +272,6 @@ Then we check the distribution of the mean of the posteriors
 
 ```{r}
 #| echo: false
-#| layout-ncol: 2
 #| column: page
 #| warning: false
 
@@ -280,7 +283,16 @@ fixed_eff_time |>
   geom_histogram() +
   geom_vline(xintercept = unique(0.3)) +
   ggtitle("Probability of detection") +
-  xlim(0, 1)
+  xlim(0, 1) +
+  theme_classic()
+
+```
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| column: page
+#| warning: false
 
 fixed_eff_time |>
   filter(variable == "log_a1") |>
@@ -288,7 +300,8 @@ fixed_eff_time |>
   geom_histogram() +
   geom_vline(xintercept = log(1)) +
   ggtitle("log_a1") +
-  xlim(-2, 2)
+  xlim(-2, 2) + 
+  theme_classic()
 
 fixed_eff_time |>
   filter(variable == "log_a2") |>
@@ -296,7 +309,8 @@ fixed_eff_time |>
   geom_histogram() +
   geom_vline(xintercept = log(0.2)) +
   ggtitle("log_a2") +
-  xlim(-3, 1)
+  xlim(-3, 1) + 
+  theme_classic()
 
 fixed_eff_time |>
   filter(variable == "b1") |>
@@ -304,7 +318,8 @@ fixed_eff_time |>
   geom_histogram() +
   geom_vline(xintercept = 160) +
   ggtitle("b1") +
-  xlim(100, 200)
+  xlim(100, 200) + 
+  theme_classic()
 
 fixed_eff_time |>
   filter(variable == "b2") |>
@@ -312,13 +327,20 @@ fixed_eff_time |>
   geom_histogram() +
   geom_vline(xintercept = 200) +
   ggtitle("b2") +
-  xlim(150, 250)
+  xlim(150, 250) + 
+  theme_classic()
 
 ```
 
 
 ## Simple Stan model for varying set of parameters
 
+
+**Warning** 
+
+*I changed back to a uniform distribution of the arrival date and departure date to make sure to sample along a wider range of values.*
+
+**Warning**
 
 In this simulation, we sample a different set of parameters each time we run the model. The <span style="color:red;">**arrival date $b_1$**</span> is normally distributed around jj 150 and the <span style="color:blue;">**departure date $b_1$**</span> is distributed around 220. Both have an sd of 7. 
 
@@ -363,7 +385,6 @@ Then we check the correlation with the mean of the posterior and the true parame
 
 ```{r}
 #| echo: false
-#| layout-ncol: 2
 #| column: page
 #| warning: false
 
@@ -371,43 +392,65 @@ tar_load(vary_eff_time)
 
 vary_eff_time |>
   filter(variable == "prob_detect") |>
-  ggplot(aes(x = mean, y = .join_data)) +
+  ggplot(aes(y = mean, x = .join_data)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("Probability of detection") +
-  xlim(0, 0.75) + ylim(0, 0.75)
+  xlim(0, 0.75) + ylim(0, 0.75) +
+  theme_classic()
+
+```
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| column: page
+#| warning: false
+
+# Create density probability matrix for the sampling date distribution
+dates <- c(110:250)
+m.unif <- expand.grid(dates, dates)
+names(m.unif) <- c(".join_data", "mean")
+m.unif$densities <- dunif(m.unif$.join_data, 130, 240) 
 
 vary_eff_time |>
   filter(variable == "log_a1") |>
-  ggplot(aes(x = mean, y = .join_data)) +
+  ggplot(aes(y = mean, x = .join_data)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("log a1") +
-  xlim(-3, 1) + ylim(-3, 1)
+  xlim(-3, 1) + ylim(-3, 1) +
+  theme_classic()
 
 vary_eff_time |>
   filter(variable == "log_a2") |>
-  ggplot(aes(x = mean, y = .join_data)) +
+  ggplot(aes(y = mean, x = .join_data)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("log a2") +
-  xlim(-3, 1) + ylim(-3, 1)
+  xlim(-3, 1) + ylim(-3, 1) +
+  theme_classic()
 
-vary_eff_time |>
-  filter(variable == "b1") |>
-  ggplot(aes(x = mean, y = .join_data)) +
-  geom_point() +
+ggplot(m.unif, aes(y = mean, x = .join_data)) +
+  geom_raster(aes(fill = densities)) +
+  scale_fill_gradient(low = "#00A0A001", high = "#00A0A07F") +
+  geom_point(data = vary_eff_time |>
+  filter(variable == "b1")) +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("b1") +
-  xlim(120, 180) + ylim(120, 180)
+  xlim(120, 180) + ylim(120, 180) +
+  theme_classic()
 
-vary_eff_time |>
-  filter(variable == "b2") |>
-  ggplot(aes(x = mean, y = .join_data)) +
-  geom_point() +
+ggplot(m.unif, aes(y = mean, x = .join_data)) +
+  geom_raster(aes(fill = densities)) +
+  scale_fill_gradient(low = "#00A0A001", high = "#00A0A07F") +
+  geom_point(data = vary_eff_time |>
+  filter(variable == "b2")) +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("b2") +
-  xlim(195, 240) + ylim(195, 240)
+  xlim(180, 250) + ylim(180, 250) +
+  theme_classic()
+
 ```
 
 
@@ -427,7 +470,8 @@ tar_load(obs_data)
 obs_data <- obs_data[[1]]
 
 ggplot(obs_data, aes(x = Nb_field_hours)) +
-  geom_histogram()
+  geom_histogram() +
+  theme_classic()
 
 summary(obs_data$Nb_field_hours)
 
@@ -447,7 +491,6 @@ Once the sampling is changed, we ran the model and look at the fit between the m
 
 ```{r}
 #| echo: false
-#| layout-ncol: 2
 #| column: page
 #| warning: false
 
@@ -455,43 +498,58 @@ tar_load(vary_effN_time)
 
 vary_effN_time |>
   filter(variable == "prob_detect") |>
-  ggplot(aes(x = mean, y = .join_data)) +
+  ggplot(aes(y = mean, x = .join_data)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("Probability of detection") +
-  xlim(0, 0.75) + ylim(0, 0.75)
+  xlim(0, 0.75) + ylim(0, 0.75) +
+  theme_classic()
+
+```
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| column: page
+#| warning: false
 
 vary_effN_time |>
   filter(variable == "log_a1") |>
-  ggplot(aes(x = mean, y = .join_data)) +
+  ggplot(aes(y = mean, x = .join_data)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("log a1") +
-  xlim(-3, 1) + ylim(-3, 1)
+  xlim(-3, 1) + ylim(-3, 1) +
+  theme_classic()
 
 vary_effN_time |>
   filter(variable == "log_a2") |>
-  ggplot(aes(x = mean, y = .join_data)) +
+  ggplot(aes(y = mean, x = .join_data)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("log a2") +
-  xlim(-3, 1) + ylim(-3, 1)
+  xlim(-3, 1) + ylim(-3, 1) +
+  theme_classic()
 
-vary_effN_time |>
-  filter(variable == "b1") |>
-  ggplot(aes(x = mean, y = .join_data)) +
-  geom_point() +
+ggplot(m.unif, aes(y = mean, x = .join_data)) +
+  geom_raster(aes(fill = densities)) +
+  scale_fill_gradient(low = "#00A0A001", high = "#00A0A07F") +
+  geom_point(data = vary_effN_time |>
+  filter(variable == "b1")) +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("b1") +
-  xlim(120, 180) + ylim(120, 180)
+  xlim(120, 180) + ylim(120, 180) +
+  theme_classic()
 
-vary_effN_time |>
-  filter(variable == "b2") |>
-  ggplot(aes(x = mean, y = .join_data)) +
-  geom_point() +
+ggplot(m.unif, aes(y = mean, x = .join_data)) +
+  geom_raster(aes(fill = densities)) +
+  scale_fill_gradient(low = "#00A0A001", high = "#00A0A07F") +
+  geom_point(data = vary_effN_time |>
+  filter(variable == "b2")) +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("b2") +
-  xlim(195, 240) + ylim(195, 240)
+  xlim(180, 250) + ylim(180, 250) +
+  theme_classic()
 ```
 
 
@@ -504,7 +562,8 @@ Here is the distribution of dates in the data :
 #| warning: false
 
 ggplot(obs_data, aes(x = Date)) +
-  geom_histogram()
+  geom_histogram() +
+  theme_classic()
 
 summary(obs_data$Date)
 
@@ -523,7 +582,6 @@ Once the sampling is changed, we ran the model and look at the fit between the m
 
 ```{r}
 #| echo: false
-#| layout-ncol: 2
 #| column: page
 #| warning: false
 
@@ -531,48 +589,71 @@ tar_load(vary_effN_timeN)
 
 vary_effN_timeN |>
   filter(variable == "prob_detect") |>
-  ggplot(aes(x = mean, y = .join_data)) +
+  ggplot(aes(y = mean, x = .join_data)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("Probability of detection") +
-  xlim(0, 0.75) + ylim(0, 0.75)
+  xlim(0, 0.75) + ylim(0, 0.75) +
+  theme_classic()
+
+```
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| column: page
+#| warning: false
+
+# Create density probability matrix for the sampling date distribution
+dates <- c(110:250)
+m.norm <- expand.grid(dates, dates)
+names(m.norm) <- c(".join_data", "mean")
+m.norm$densities <- dnorm(m.norm$.join_data, 180, 15)
 
 vary_effN_timeN |>
   filter(variable == "log_a1") |>
-  ggplot(aes(x = mean, y = .join_data)) +
+  ggplot(aes(y = mean, x = .join_data)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("log a1") +
-  xlim(-3, 1) + ylim(-3, 1)
+  xlim(-3, 1) + ylim(-3, 1) +
+  theme_classic()
 
 vary_effN_timeN |>
   filter(variable == "log_a2") |>
-  ggplot(aes(x = mean, y = .join_data)) +
+  ggplot(aes(y = mean, x = .join_data)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("log a2") +
-  xlim(-3, 1) + ylim(-3, 1)
+  xlim(-3, 1) + ylim(-3, 1) +
+  theme_classic()
 
-vary_effN_timeN |>
-  filter(variable == "b1") |>
-  ggplot(aes(x = mean, y = .join_data)) +
-  geom_point() +
+ggplot(m.norm, aes(y = mean, x = .join_data)) +
+  geom_raster(aes(fill = densities)) +
+  scale_fill_gradient(low = "#00A0A001", high = "#00A0A0") +
+  geom_point(data = vary_effN_timeN |>
+  filter(variable == "b1")) +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("b1") +
-  xlim(120, 180) + ylim(120, 180)
+  xlim(120, 180) + ylim(120, 180) +
+  theme_classic()
 
-vary_effN_timeN |>
-  filter(variable == "b2") |>
-  ggplot(aes(x = mean, y = .join_data)) +
-  geom_point() +
+  
+ggplot(m.norm, aes(y  = mean, x = .join_data)) +
+  geom_raster(aes(fill = densities)) +
+  scale_fill_gradient(low = "#00A0A001", high = "#00A0A0") +
+  geom_point(data = vary_effN_timeN |>
+  filter(variable == "b2")) +
   geom_abline(intercept = 0, slope = 1, linetype="dashed") +
   ggtitle("b2") +
-  xlim(195, 240) + ylim(195, 240)
+  xlim(170, 240) + ylim(170, 240) +
+  theme_classic()
+  
 ```
 
 # Testing our occupancy model with data
 
-Data on Long-tailed Duck
+## Data on Long-tailed Duck
 
 Now we test our Bayesian framework on our real observation data. For this test, we select the data of the Long-tailed Duck as it is rather easy to observe, distributed almost everywhere on the island and should have an arrival and departure date within the observation period.
 
@@ -596,11 +677,12 @@ data.frame(
 
 ```
 
+## Running the model, all years together
+
 Then we run the model and extract the distribution of the posteriors :
 
 ```{r}
 #| echo: false
-#| layout-ncol: 2
 #| warning: false
 
 tar_load(duck_fixed_year)
@@ -613,6 +695,14 @@ bayesplot::mcmc_areas_ridges(
      border_size = 0.75,
      prob = 0.8, # 80% intervals
 ) + xlim(0, 1)
+
+```
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| warning: false
+#| column: page
 
 bayesplot::mcmc_areas_ridges(
      posterior, 
@@ -646,17 +736,20 @@ bayesplot::mcmc_areas_ridges(
 
 ```
 
+We can extract the posterior for each chain
 
 ```{r}
 #| echo: false
 #| warning: false
 #| fig-align: center
+#| column: page
 
 bayesplot::mcmc_dens_overlay(posterior, 
                   pars = c("prob_detect", "log_a1", "log_a2", "b1", "b2"), 
                   transformations = list("log_a2" = "exp", "log_a1" = "exp"))
 
 ```
+
 We can then extract the mean parameters and plot the predicted curve of presence :
 
 ```{r}
@@ -667,8 +760,8 @@ duck_fixed_year[[1]]
 ```
 
 ```{r}
-
-
+#| echo: false
+#| warning: false
 
 a1 = -1.19 
 a2 = -2.73 
@@ -680,9 +773,10 @@ data.frame(
   "jj_date" = duck_data$jj_date,
   "effort" = duck_data$effort
 ) |>
-  mutate(effort_scale = effort/max(effort)) |> 
+  group_by(y, jj_date) |> 
+  summarise(n = n()) |> 
   ggplot(aes(x = jj_date, y = y)) +
-  geom_jitter(height = 0.35, aes(alpha = effort_scale)) +
+  geom_point(alpha = 0.2, aes(size = n)) +
   theme_classic()  +
   stat_function(
     fun = function(x)
@@ -691,7 +785,7 @@ data.frame(
       )))) * (1 / (1 + exp(exp(a2) * (
         x - b2
       )))),
-    color = "red",
+    color = "#00A0A07F",
     lwd = 1.5
   )
   
@@ -725,16 +819,25 @@ gq_line_mcmc_occ_eff_time_line |>
 ```
 
 
+```{r}
+# #| class-output: stan
+# repeat_measures <- cmdstanr::cmdstan_model(
+#   here::here("posts/2023-09-01-measurement-error/repeat_measures.stan"),
+#   pedantic = TRUE)
+# repeat_measures
+```
 
 
-
-::: {style="text-align: center;"}
 ** **TODO** **
-:::
+
 
 - [x] Understand why the model with presence ~ time does not seems to fit very well
 - [x] Run the model with presence parameters varying at each simulation
 - [x] Build the 1:1 graph for the mean of the posterior vs real parameters
-- [ ] Run a model for the Long-tailed Duck data all year combined
-- [ ] Illustrate the model like in https://mc-stan.org/bayesplot/articles/plotting-mcmc-draws.html
+- [X] Run a model for the Long-tailed Duck data all year combined
+- [X] Illustrate the model like in https://mc-stan.org/bayesplot/articles/plotting-mcmc-draws.html
+- [ ] Adjust the model for a logit form
+- [ ] Simulate data with a hierarchical structure for one parameters (ex: b1)
+- [ ] Run a hierarchical model for one parameters
+- [ ] Simulate and run a model with all the relevent parameter varying with year
 - [ ] Run a model for the Long-tailed Duck with parameter varying each year
