@@ -13,7 +13,7 @@ number-depth: 3
 comments:
   hypothesis: true
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 
@@ -697,6 +697,36 @@ data.frame(
   
 
 ```
+
+
+### Posterior distribution of mean and predicted observations
+
+```{r}
+tar_load(gq_post_mcmc_occ_eff_time_gq)
+
+post_pred_dist <- gq_post_mcmc_occ_eff_time_gq$draws(variables = "obs_pred") |> 
+  posterior::as_draws_matrix()
+  
+bayesplot::ppc_dens_overlay(y = duck_data$y, 
+                            yrep = head(post_pred_dist, 200))
+```
+
+Try this again but make a smooth line for the average
+
+```{r}
+tar_load(gq_line_mcmc_occ_eff_time_line)
+tar_load(new_dates)
+
+gq_line_mcmc_occ_eff_time_line |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  mutate(date = new_dates[i]) |> 
+  ggplot(aes(x = date, dist = .value)) + tidybayes::stat_lineribbon()
+
+```
+
+
+
+
 
 ::: {style="text-align: center;"}
 ** **TODO** **

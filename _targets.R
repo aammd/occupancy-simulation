@@ -150,6 +150,24 @@ list(
     duck_fixed_year,
     command = stan_duck(duck_data)
   ),
+  ## run a stan model and get the posterior
+  tar_stan_mcmc(
+    gq_post,stan_files = "occ_eff_time_gq.stan",data = duck_data, parallel_chains = 4
+  ),
+  tar_target(
+    new_dates, 
+    command = seq(from = 1, to = 365, by = 14)
+  ),
+  tar_target(
+    duck_data_line,
+    command = purrr::list_modify(duck_data, nline = length(new_dates), newdate = new_dates)
+  ),
+  tar_stan_mcmc(
+    gq_line, 
+    stan_files = "occ_eff_time_line.stan", data = duck_data_line, parallel_chains = 4
+  ),
+  
+  
   # tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
   #   fixed_eff_time_log,
   #   stan_files = "occ_eff_time_log.stan",
