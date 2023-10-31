@@ -150,6 +150,7 @@ list(
     duck_fixed_year,
     command = stan_duck(duck_data)
   ),
+  
   # tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
   #   fixed_eff_time_log,
   #   stan_files = "occ_eff_time_log.stan",
