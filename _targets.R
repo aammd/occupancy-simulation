@@ -150,24 +150,51 @@ list(
     duck_fixed_year,
     command = stan_duck(duck_data)
   ),
-  ## run a stan model and get the entire posterior
+  ## run a Stan model and get the entire posterior
   tar_stan_mcmc(
-    gq_post,stan_files = "occ_eff_time_gq.stan",data = duck_data, parallel_chains = 4
+    gq_post,
+    stan_files = "occ_eff_time_gq.stan",
+    data = duck_data, 
+    parallel_chains = 4
   ),
+  # Create new date at which we predict the model
   tar_target(
     new_dates, 
-    command = seq(from = 1, to = 365, by = 14)
+    command = seq(from = 100, to = 300, by = 1)
   ),
-  ## run a stan model and get a nice trendline
+  # Add element to our duck_data list to get a prediction
   tar_target(
     duck_data_line,
     command = purrr::list_modify(duck_data, nline = length(new_dates), newdate = new_dates)
   ),
+  # Run a Stan model on the data and predict the values on new_dates
   tar_stan_mcmc(
     gq_line, 
-    stan_files = "occ_eff_time_line.stan", data = duck_data_line, parallel_chains = 4
+    stan_files = "occ_eff_time_line.stan", 
+    data = duck_data_line, 
+    parallel_chains = 4
   ),
   
+  # Simulate data with varying B1 value each year
+  tar_target(
+    fake_data_b1,
+      simulate_add_b1(
+        log_a1 = log(1),
+        log_a2 = log(0.2),
+        b2 = 200,
+        n.year = 5,
+        prob_detect = 0.3,
+        nsample = 200
+      )
+  ),
+  
+  # # Run a Stan model for the fake data with B1 varying in each year
+  # tar_stan_mcmc(
+  #   b1_fixed_mod,
+  #   stan_files = "b1_fixed.stan",
+  #   data = fake_data_b1, 
+  #   parallel_chains = 4
+  # ),
   # tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
   #   fixed_eff_time_log,
   #   stan_files = "occ_eff_time_log.stan",

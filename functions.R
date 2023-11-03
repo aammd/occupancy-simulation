@@ -319,13 +319,13 @@ stan_duck <- function(data) {
 # B1 ~ Year
 # Detection ~ Effort
 # Fixed parameters values
-simulate_hierarch_b1 <-
+simulate_add_b1 <-
   function(log_a1, log_a2, b2, n.year, prob_detect, nsample = 200) {
 
     df_sim <- tibble()
     
     # Draw a new b1 for each year
-    b1 <- floor(rnorm(n.year, 150, 7))
+    b1 <- floor(runif(n.year, 140, 160))
     
     for (i in 1:n.year) {
       
@@ -357,8 +357,8 @@ simulate_hierarch_b1 <-
     }
     
     list(
-      N = nsample,
-      N.Y = n.year,
+      N = nsample*n.year,
+      N_Y = n.year,
       y = df_sim$y,
       year = df_sim$year,
       jj_date = df_sim$jj_date,

@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Andrew MacDonald and Gabriel Bergeron">
-<meta name="dcterms.date" content="2023-10-25">
+<meta name="dcterms.date" content="2023-11-03">
 
 <title>Simple occupancy STAN</title>
 <style>
@@ -143,8 +143,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#testing-our-occupancy-model-with-data" id="toc-testing-our-occupancy-model-with-data" class="nav-link" data-scroll-target="#testing-our-occupancy-model-with-data"><span class="toc-section-number">4</span>  Testing our occupancy model with data</a>
   <ul class="collapse">
   <li><a href="#data-on-long-tailed-duck" id="toc-data-on-long-tailed-duck" class="nav-link" data-scroll-target="#data-on-long-tailed-duck"><span class="toc-section-number">4.1</span>  Data on Long-tailed Duck</a></li>
-  <li><a href="#running-the-model-all-years-together" id="toc-running-the-model-all-years-together" class="nav-link" data-scroll-target="#running-the-model-all-years-together"><span class="toc-section-number">4.2</span>  Running the model, all years together</a></li>
+  <li><a href="#running-the-model-all-years-together" id="toc-running-the-model-all-years-together" class="nav-link" data-scroll-target="#running-the-model-all-years-together"><span class="toc-section-number">4.2</span>  Running the model, all years together</a>
+  <ul class="collapse">
+  <li><a href="#posterior-distribution-of-mean-and-predicted-observations" id="toc-posterior-distribution-of-mean-and-predicted-observations" class="nav-link" data-scroll-target="#posterior-distribution-of-mean-and-predicted-observations"><span class="toc-section-number">4.2.1</span>  Posterior distribution of mean and predicted observations</a></li>
   </ul></li>
+  </ul></li>
+  <li><a href="#fixed-effect-occupancy-model" id="toc-fixed-effect-occupancy-model" class="nav-link" data-scroll-target="#fixed-effect-occupancy-model"><span class="toc-section-number">5</span>  Fixed effect occupancy model</a></li>
   </ul>
 </nav>
 </div>
@@ -171,7 +175,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">October 25, 2023</p>
+      <p class="date">November 3, 2023</p>
     </div>
   </div>
   
@@ -661,18 +665,192 @@ $.join_data$b2
 <p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-32-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<div style="text-align: center;">
-<p>** <strong>TODO</strong> **</p>
+<section id="posterior-distribution-of-mean-and-predicted-observations" class="level3" data-number="4.2.1">
+<h3 data-number="4.2.1" class="anchored" data-anchor-id="posterior-distribution-of-mean-and-predicted-observations"><span class="header-section-number">4.2.1</span> Posterior distribution of mean and predicted observations</h3>
+<p>Below, we manually extracted the coefficients from the model to plot the predicted model. However, we can modify the Stan code to extract the posterior directly into the Stan computation. It uses the notation “general quantities”, as shown below.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<div class="sourceCode" id="cb11"><pre class="sourceCode stan code-with-copy"><code class="sourceCode stan"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> {</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>&gt; N;</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">array</span>[N] <span class="dt">int</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>, <span class="kw">upper</span>=<span class="dv">1</span>&gt; y;</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>[N] effort;</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>[N] jj_date;</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co">// The parameters accepted by the model. Our model</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co">// accepts five parameters.</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="kw">parameters</span> {</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>, <span class="kw">upper</span>=<span class="dv">1</span>&gt; prob_detect;</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span> log_a1;</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span> log_a2;</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span>&lt;<span class="kw">lower</span>=<span class="dv">1</span>, <span class="kw">upper</span>=<span class="dv">365</span>&gt; b1;</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span>&lt;<span class="kw">lower</span>=<span class="dv">1</span>, <span class="kw">upper</span>=<span class="dv">365</span>&gt; b2;</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="co">// The model to be estimated. We model the output</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="co">// 'y' to be normally distributed with mean 'mu'</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="co">// and standard deviation 'sigma'.</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="kw">model</span> {</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>  prob_detect ~ beta(<span class="dv">2</span>, <span class="dv">5</span>);</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>  log_a1 ~ normal(-<span class="dv">1</span>, <span class="dv">1</span>);</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>  log_a2 ~ normal(-<span class="dv">1</span>, <span class="dv">1</span>);</span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>  b1 ~ normal(<span class="dv">150</span>, <span class="dv">7</span>);</span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>  b2 ~ normal(<span class="dv">210</span>, <span class="dv">7</span>);</span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>  y ~ bernoulli((<span class="dv">1</span> - (<span class="dv">1</span> - prob_detect)^effort) .* (<span class="dv">1</span> / (<span class="dv">1</span> + exp(-exp(log_a1) .* (jj_date - b1))) .* (<span class="dv">1</span> / (<span class="dv">1</span> + exp(exp(log_a2) .* (jj_date - b2))))));</span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a><span class="kw">generated quantities</span> {</span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>[N] mu;</span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a>  mu = (<span class="dv">1</span> - (<span class="dv">1</span> - prob_detect)^effort) .* (<span class="dv">1</span> / (<span class="dv">1</span> + exp(-exp(log_a1) .* (jj_date - b1))) .* (<span class="dv">1</span> / (<span class="dv">1</span> + exp(exp(log_a2) .* (jj_date - b2)))));</span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>[N] obs_pred;</span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span>:N){</span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>    obs_pred[i] = bernoulli_rng(mu[i]);</span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</div>
+<p>He we plot the densities of <span class="math inline">\(y\)</span> in our data set versus the posterior. The model performs well as the observed <span class="math inline">\(y\)</span> density falls well within the posterior of the model.</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-34-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Try this again but make a smooth line for the average and plot against the julian date :</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-35-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Not really surprising that the interval is bigger when the <span class="math inline">\(a_i\)</span> is lower (more variation, more uncertainty).</p>
+</section>
+</section>
+</section>
+<section id="fixed-effect-occupancy-model" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Fixed effect occupancy model</h1>
+<p>The next step in our analysis is to slowly increase the complexity of the model. As we will want to estimate the parameters for all years and all species, we will need to transform our model into a hierarchical one (as we assume that for each species, the parameters have a certain distribution). Before doing that, we transform our model to account for fixed effect of year on our parameters (thus, they are estimated as factors, independently from each other).</p>
+<p>First, we have to simulate data. We are gonna start one parameter at the time and begin with <span class="math inline">\(b_1\)</span>. We simulate 200 observations per year for 5 years. We also add the variable “year”. The data looks like this :</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>List of 8
+ $ N         : num 1000
+ $ N_Y       : num 5
+ $ y         : int [1:1000] 0 0 0 0 1 1 0 0 1 0 ...
+ $ year      : num [1:1000] 2010 2010 2010 2010 2010 2010 2010 2010 2010 2010 ...
+ $ jj_date   : num [1:1000] 228 149 153 145 175 162 148 132 180 202 ...
+ $ effort    : num [1:1000] 12 11 7 15 19 19 7 12 7 16 ...
+ $ b1        : num [1:5] 158 141 143 141 154
+ $ .join_data:List of 5
+  ..$ prob_detect: num 0.3
+  ..$ log_a1     : num 0.693
+  ..$ log_a2     : num -1.61
+  ..$ b1         : num [1:5] 158 141 143 141 154
+  ..$ b2         : num 200</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="occupancy_STAN_files/figure-html/unnamed-chunk-37-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>We modify our Stan code so that a <span class="math inline">\(b_1\)</span> parameter is estimated for each year</p>
+<div class="cell">
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in 'C:/Users/gabri/AppData/Local/Temp/Rtmpi207zH/model-7a844cd36008.stan', line 29, column 14: Argument
+    210 suggests there may be parameters that are not unit scale; consider
+    rescaling with a multiplier (see manual section 22.12).
+Warning in 'C:/Users/gabri/AppData/Local/Temp/Rtmpi207zH/model-7a844cd36008.stan', line 28, column 14: Argument
+    150 suggests there may be parameters that are not unit scale; consider
+    rescaling with a multiplier (see manual section 22.12).
+Warning: Your Stan program has a parameter b2 with a lower and upper bound in
+    its declaration. These hard constraints are not recommended, for two
+    reasons: (a) Except when there are logical or physical constraints, it is
+    very unusual for you to be sure that a parameter will fall inside a
+    specified range, and (b) The infinite gradient induced by a hard
+    constraint can cause difficulties for Stan's sampling algorithm. As a
+    consequence, we recommend soft constraints rather than hard constraints;
+    for example, instead of constraining an elasticity parameter to fall
+    between 0, and 1, leave it unconstrained and give it a normal(0.5,0.5)
+    prior distribution.
+Warning: Your Stan program has a parameter b1 with a lower and upper bound in
+    its declaration. These hard constraints are not recommended, for two
+    reasons: (a) Except when there are logical or physical constraints, it is
+    very unusual for you to be sure that a parameter will fall inside a
+    specified range, and (b) The infinite gradient induced by a hard
+    constraint can cause difficulties for Stan's sampling algorithm. As a
+    consequence, we recommend soft constraints rather than hard constraints;
+    for example, instead of constraining an elasticity parameter to fall
+    between 0, and 1, leave it unconstrained and give it a normal(0.5,0.5)
+    prior distribution.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>In file included from stan/lib/stan_math/stan/math/prim/prob/von_mises_lccdf.hpp:5,
+                 from stan/lib/stan_math/stan/math/prim/prob/von_mises_ccdf_log.hpp:4,
+                 from stan/lib/stan_math/stan/math/prim/prob.hpp:356,
+                 from stan/lib/stan_math/stan/math/prim.hpp:16,
+                 from stan/lib/stan_math/stan/math/rev.hpp:14,
+                 from stan/lib/stan_math/stan/math.hpp:19,
+                 from stan/src/stan/model/model_header.hpp:4,
+                 from C:/Users/gabri/AppData/Local/Temp/Rtmpi207zH/model-7a844cd36008.hpp:2:
+stan/lib/stan_math/stan/math/prim/prob/von_mises_cdf.hpp: In function 'stan::return_type_t&lt;T_x, T_sigma, T_l&gt; stan::math::von_mises_cdf(const T_x&amp;, const T_mu&amp;, const T_k&amp;)':
+stan/lib/stan_math/stan/math/prim/prob/von_mises_cdf.hpp:194: note: '-Wmisleading-indentation' is disabled from this point onwards, since column-tracking was disabled due to the size of the code/headers
+  194 |       if (cdf_n &lt; 0.0)
+      | </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>stan/lib/stan_math/stan/math/prim/prob/von_mises_cdf.hpp:194: note: adding '-flarge-source-files' will allow for more column-tracking support, at the expense of compilation time and memory</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<div class="sourceCode" id="cb16"><pre class="sourceCode stan code-with-copy"><code class="sourceCode stan"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> {</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>&gt; N; <span class="co">// Number of observation</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>&gt; N_Y; <span class="co">// Number of years</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">array</span>[N] <span class="dt">int</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>, <span class="kw">upper</span>=<span class="dv">1</span>&gt; y; <span class="co">// Arrey of our observation (response)</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">array</span>[N] <span class="dt">int</span>&lt;<span class="kw">lower</span>=<span class="dv">1</span>, <span class="kw">upper</span>=N_Y&gt; year; <span class="co">// Indices of years</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>[N] effort; <span class="co">// Vector of effort (explanatory variable)</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>[N] jj_date; <span class="co">// Vector of observation data (explanatory variable)</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="co">// The parameters accepted by the model. Our model</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="co">// accepts five parameters.</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="kw">parameters</span> {</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>, <span class="kw">upper</span>=<span class="dv">1</span>&gt; prob_detect;</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span> log_a1;</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span> log_a2;</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span>&lt;<span class="kw">lower</span>=<span class="dv">1</span>, <span class="kw">upper</span>=<span class="dv">365</span>&gt; b2;</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>&lt;<span class="kw">lower</span>=<span class="dv">1</span>, <span class="kw">upper</span>=<span class="dv">365</span>&gt;[N_Y] b1; <span class="co">// Value of B</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a><span class="co">// The model to be estimated. We model the output</span></span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a><span class="co">// 'y' to be normally distributed with mean 'mu'</span></span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a><span class="co">// and standard deviation 'sigma'.</span></span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a><span class="kw">model</span> {</span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>  prob_detect ~ beta(<span class="dv">2</span>, <span class="dv">5</span>);</span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>  log_a1 ~ normal(-<span class="dv">1</span>, <span class="dv">1</span>);</span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>  log_a2 ~ normal(-<span class="dv">1</span>, <span class="dv">1</span>);</span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>  b1 ~ normal(<span class="dv">150</span>, <span class="dv">7</span>);</span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a>  b2 ~ normal(<span class="dv">210</span>, <span class="dv">7</span>);</span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>  y ~ bernoulli((<span class="dv">1</span> - (<span class="dv">1</span> - prob_detect)^effort) .* (<span class="dv">1</span> / (<span class="dv">1</span> + exp(-exp(log_a1) .* (jj_date - b1[year]))) .* (<span class="dv">1</span> / (<span class="dv">1</span> + exp(exp(log_a2) .* (jj_date - b2))))));</span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<p>We then run the model</p>
+<p>** <strong>TODO</strong> **</p>
 <ul class="task-list">
 <li><input type="checkbox" disabled="" checked="">Understand why the model with presence ~ time does not seems to fit very well</li>
 <li><input type="checkbox" disabled="" checked="">Run the model with presence parameters varying at each simulation</li>
 <li><input type="checkbox" disabled="" checked="">Build the 1:1 graph for the mean of the posterior vs real parameters</li>
-<li><input type="checkbox" disabled="">Run a model for the Long-tailed Duck data all year combined</li>
-<li><input type="checkbox" disabled="">Illustrate the model like in https://mc-stan.org/bayesplot/articles/plotting-mcmc-draws.html</li>
+<li><input type="checkbox" disabled="" checked="">Run a model for the Long-tailed Duck data all year combined</li>
+<li><input type="checkbox" disabled="" checked="">Illustrate the model like in <a href="https://mc-stan.org/bayesplot/articles/plotting-mcmc-draws.html">this article</a></li>
+<li><input type="checkbox" disabled="">Adjust the model for a logit form</li>
+<li><input type="checkbox" disabled="">Simulate and run an additive model in Stan</li>
+<li><input type="checkbox" disabled="">Simulate and run a model with all the relevant parameter varying with year</li>
 <li><input type="checkbox" disabled="">Run a model for the Long-tailed Duck with parameter varying each year</li>
+<li><input type="checkbox" disabled="">Simulate data with a hierarchical structure for one parameters (ex: b1)</li>
+<li><input type="checkbox" disabled="">Run a hierarchical model for one parameters</li>
 </ul>
-</section>
 </section>
 
 </main>

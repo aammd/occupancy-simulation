@@ -1,8 +1,8 @@
 data {
   int<lower=0> N; // Number of observation
-  int<lower=0> N.Y; // Number of years
+  int<lower=0> N_Y; // Number of years
   array[N] int<lower=0, upper=1> y; // Arrey of our observation (response)
-  array[N] int<lower=1, upper=N.Y> year; // Indices of years
+  array[N] int<lower=1, upper=N_Y> year; // Indices of years
   vector[N] effort; // Vector of effort (explanatory variable)
   vector[N] jj_date; // Vector of observation data (explanatory variable)
 }
@@ -15,7 +15,7 @@ parameters {
   real log_a2;
   real<lower=1, upper=365> b2;
   
-  vector<lower=1, upper=365>[N.Y] b1; // Value of B 
+  vector<lower=1, upper=365>[N_Y] b1; // Value of B
 }
 
 // The model to be estimated. We model the output

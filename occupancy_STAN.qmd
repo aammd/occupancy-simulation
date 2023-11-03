@@ -795,7 +795,22 @@ data.frame(
 
 ### Posterior distribution of mean and predicted observations
 
+Below, we manually extracted the coefficients from the model to plot the predicted model. However, we can modify the Stan code to extract the posterior directly into the Stan computation. It uses the notation "general quantities", as shown below. 
+
 ```{r}
+#| class-output: stan
+#| echo: false
+gq <- cmdstanr::cmdstan_model(stan_file = "occ_eff_time_gq.stan",
+  pedantic = TRUE)
+
+gq
+```
+
+He we plot the densities of $y$ in our data set versus the posterior. The model performs well as the observed $y$ density falls well within the posterior of the model.
+
+```{r}
+#| echo: false
+
 tar_load(gq_post_mcmc_occ_eff_time_gq)
 
 post_pred_dist <- gq_post_mcmc_occ_eff_time_gq$draws(variables = "obs_pred") |> 
@@ -805,27 +820,75 @@ bayesplot::ppc_dens_overlay(y = duck_data$y,
                             yrep = head(post_pred_dist, 200))
 ```
 
-Try this again but make a smooth line for the average
+Try this again but make a smooth line for the average and plot against the julian date :
 
 ```{r}
+#| echo: false
+
 tar_load(gq_line_mcmc_occ_eff_time_line)
 tar_load(new_dates)
 
 gq_line_mcmc_occ_eff_time_line |> 
   tidybayes::gather_rvars(mu_line[i]) |> 
   mutate(date = new_dates[i]) |> 
-  ggplot(aes(x = date, dist = .value)) + tidybayes::stat_lineribbon()
+  ggplot(aes(x = date, dist = .value)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic()
 
+```
+
+Not really surprising that the interval is bigger when the $a_i$ is lower (more variation, more uncertainty).
+
+
+# Fixed effect occupancy model
+
+The next step in our analysis is to slowly increase the complexity of the model. As we will want to estimate the parameters for all years and all species, we will need to transform our model into a hierarchical one (as we assume that for each species, the parameters have a certain distribution). Before doing that, we transform our model to account for fixed effect of year on our parameters (thus, they are estimated as factors, independently from each other). 
+
+
+First, we have to simulate data. We are gonna start one parameter at the time and begin with $b_1$. We simulate 200 observations per year for 5 years. We also add the variable "year". The data looks like this :
+
+```{r}
+#| echo: false
+
+tar_load(fake_data_b1)
+str(fake_data_b1)
 ```
 
 
 ```{r}
-# #| class-output: stan
-# repeat_measures <- cmdstanr::cmdstan_model(
-#   here::here("posts/2023-09-01-measurement-error/repeat_measures.stan"),
-#   pedantic = TRUE)
-# repeat_measures
+#| echo: false
+#| error: false
+
+b1_year <- data.frame(year = unique(fake_data_b1$year),
+                      b1 = fake_data_b1$.join_data$b1)
+
+fake_data_b1 |> 
+  as.data.frame() |> 
+  group_by(y, year, jj_date) |> 
+  count() |> 
+  ggplot(aes(x = jj_date, y = y)) +
+  geom_point(alpha = 0.2, aes(size = n)) +
+  theme_classic() +
+  geom_vline(data = b1_year, mapping = aes(xintercept = b1)) +
+  facet_wrap(~ year)
+
 ```
+
+We modify our Stan code so that a $b_1$ parameter is estimated for each year 
+
+```{r}
+#| class-output: stan
+#| echo: false
+#| #| error: false
+
+b1_fixed_stan <- cmdstanr::cmdstan_model(stan_file = "b1_fixed.stan",
+  pedantic = TRUE)
+
+b1_fixed_stan
+```
+
+We then run the model
+
 
 
 ** **TODO** **
@@ -835,9 +898,10 @@ gq_line_mcmc_occ_eff_time_line |>
 - [x] Run the model with presence parameters varying at each simulation
 - [x] Build the 1:1 graph for the mean of the posterior vs real parameters
 - [X] Run a model for the Long-tailed Duck data all year combined
-- [X] Illustrate the model like in https://mc-stan.org/bayesplot/articles/plotting-mcmc-draws.html
+- [X] Illustrate the model like in [this article](https://mc-stan.org/bayesplot/articles/plotting-mcmc-draws.html)
 - [ ] Adjust the model for a logit form
+- [ ] Simulate and run an additive model in Stan
+- [ ] Simulate and run a model with all the relevant parameter varying with year
+- [ ] Run a model for the Long-tailed Duck with parameter varying each year
 - [ ] Simulate data with a hierarchical structure for one parameters (ex: b1)
 - [ ] Run a hierarchical model for one parameters
-- [ ] Simulate and run a model with all the relevent parameter varying with year
-- [ ] Run a model for the Long-tailed Duck with parameter varying each year
