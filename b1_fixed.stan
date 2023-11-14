@@ -5,6 +5,9 @@ data {
   array[N] int<lower = 1, upper = N_Y> year; // Indices of years
   vector[N] effort; // Vector of effort (explanatory variable)
   vector[N] jj_date; // Vector of observation data (explanatory variable)
+  int<lower=0> n_new;
+  vector[n_new*N_Y] newdate;
+  array[n_new*N_Y] int<lower=1, upper = N_Y> newyear;
 }
 
 // The parameters accepted by the model. Our model
@@ -29,4 +32,7 @@ model {
   b2 ~ normal(210, 7);
   
   y ~ bernoulli((1 - (1 - prob_detect)^effort) .* (1 / (1 + exp(-exp(log_a1) .* (jj_date - b1[year]))) .* (1 / (1 + exp(exp(log_a2) .* (jj_date - b2))))));
+}
+generated quantities {
+  vector[n_new*N_Y] mu_line = (1 / (1 + exp(-exp(log_a1) .* (newdate - b1[newyear])))) .* (1 / (1 + exp(exp(log_a2) .* (newdate - b2))));
 }

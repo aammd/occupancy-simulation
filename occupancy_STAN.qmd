@@ -930,6 +930,20 @@ True b1 values are
 b1_year
 ```
 
+
+Visualize
+
+```{r}
+sampl_b1_fixed_stan |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_b1[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic()
+```
+
+
+
 ```{r}
 
 draws <- sampl_b1_fixed_stan$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b1"))
