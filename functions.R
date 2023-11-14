@@ -360,7 +360,7 @@ simulate_add_b1 <-
       N = nsample*n.year,
       N_Y = n.year,
       y = df_sim$y,
-      year = df_sim$year,
+      year = as.factor(df_sim$year),
       jj_date = df_sim$jj_date,
       effort = df_sim$effort,
       .join_data = list(

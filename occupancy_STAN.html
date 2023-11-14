@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Andrew MacDonald and Gabriel Bergeron">
-<meta name="dcterms.date" content="2023-11-03">
+<meta name="dcterms.date" content="2023-11-10">
 
 <title>Simple occupancy STAN</title>
 <style>
@@ -99,6 +99,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <link href="occupancy_STAN_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="occupancy_STAN_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 <script async="" src="https://hypothes.is/embed.js"></script>
+<link href="occupancy_STAN_files/libs/tabwid-1.1.3/tabwid.css" rel="stylesheet">
+<script src="occupancy_STAN_files/libs/tabwid-1.1.3/tabwid.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
@@ -175,7 +177,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 3, 2023</p>
+      <p class="date">November 10, 2023</p>
     </div>
   </div>
   
@@ -733,17 +735,16 @@ $.join_data$b2
 <p>First, we have to simulate data. We are gonna start one parameter at the time and begin with <span class="math inline">\(b_1\)</span>. We simulate 200 observations per year for 5 years. We also add the variable “year”. The data looks like this :</p>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
-<pre><code>List of 8
+<pre><code>List of 7
  $ N         : num 1000
  $ N_Y       : num 5
  $ y         : int [1:1000] 0 0 0 0 1 1 0 0 1 0 ...
- $ year      : num [1:1000] 2010 2010 2010 2010 2010 2010 2010 2010 2010 2010 ...
+ $ year      : Factor w/ 5 levels "2010","2011",..: 1 1 1 1 1 1 1 1 1 1 ...
  $ jj_date   : num [1:1000] 228 149 153 145 175 162 148 132 180 202 ...
  $ effort    : num [1:1000] 12 11 7 15 19 19 7 12 7 16 ...
- $ b1        : num [1:5] 158 141 143 141 154
  $ .join_data:List of 5
   ..$ prob_detect: num 0.3
-  ..$ log_a1     : num 0.693
+  ..$ log_a1     : num 0
   ..$ log_a2     : num -1.61
   ..$ b1         : num [1:5] 158 141 143 141 154
   ..$ b2         : num 200</code></pre>
@@ -756,87 +757,154 @@ $.join_data$b2
 </div>
 <p>We modify our Stan code so that a <span class="math inline">\(b_1\)</span> parameter is estimated for each year</p>
 <div class="cell">
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in 'C:/Users/gabri/AppData/Local/Temp/Rtmpi207zH/model-7a844cd36008.stan', line 29, column 14: Argument
-    210 suggests there may be parameters that are not unit scale; consider
-    rescaling with a multiplier (see manual section 22.12).
-Warning in 'C:/Users/gabri/AppData/Local/Temp/Rtmpi207zH/model-7a844cd36008.stan', line 28, column 14: Argument
-    150 suggests there may be parameters that are not unit scale; consider
-    rescaling with a multiplier (see manual section 22.12).
-Warning: Your Stan program has a parameter b2 with a lower and upper bound in
-    its declaration. These hard constraints are not recommended, for two
-    reasons: (a) Except when there are logical or physical constraints, it is
-    very unusual for you to be sure that a parameter will fall inside a
-    specified range, and (b) The infinite gradient induced by a hard
-    constraint can cause difficulties for Stan's sampling algorithm. As a
-    consequence, we recommend soft constraints rather than hard constraints;
-    for example, instead of constraining an elasticity parameter to fall
-    between 0, and 1, leave it unconstrained and give it a normal(0.5,0.5)
-    prior distribution.
-Warning: Your Stan program has a parameter b1 with a lower and upper bound in
-    its declaration. These hard constraints are not recommended, for two
-    reasons: (a) Except when there are logical or physical constraints, it is
-    very unusual for you to be sure that a parameter will fall inside a
-    specified range, and (b) The infinite gradient induced by a hard
-    constraint can cause difficulties for Stan's sampling algorithm. As a
-    consequence, we recommend soft constraints rather than hard constraints;
-    for example, instead of constraining an elasticity parameter to fall
-    between 0, and 1, leave it unconstrained and give it a normal(0.5,0.5)
-    prior distribution.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>In file included from stan/lib/stan_math/stan/math/prim/prob/von_mises_lccdf.hpp:5,
-                 from stan/lib/stan_math/stan/math/prim/prob/von_mises_ccdf_log.hpp:4,
-                 from stan/lib/stan_math/stan/math/prim/prob.hpp:356,
-                 from stan/lib/stan_math/stan/math/prim.hpp:16,
-                 from stan/lib/stan_math/stan/math/rev.hpp:14,
-                 from stan/lib/stan_math/stan/math.hpp:19,
-                 from stan/src/stan/model/model_header.hpp:4,
-                 from C:/Users/gabri/AppData/Local/Temp/Rtmpi207zH/model-7a844cd36008.hpp:2:
-stan/lib/stan_math/stan/math/prim/prob/von_mises_cdf.hpp: In function 'stan::return_type_t&lt;T_x, T_sigma, T_l&gt; stan::math::von_mises_cdf(const T_x&amp;, const T_mu&amp;, const T_k&amp;)':
-stan/lib/stan_math/stan/math/prim/prob/von_mises_cdf.hpp:194: note: '-Wmisleading-indentation' is disabled from this point onwards, since column-tracking was disabled due to the size of the code/headers
-  194 |       if (cdf_n &lt; 0.0)
-      | </code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>stan/lib/stan_math/stan/math/prim/prob/von_mises_cdf.hpp:194: note: adding '-flarge-source-files' will allow for more column-tracking support, at the expense of compilation time and memory</code></pre>
-</div>
 <div class="cell-output cell-output-stdout">
-<div class="sourceCode" id="cb16"><pre class="sourceCode stan code-with-copy"><code class="sourceCode stan"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> {</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>&gt; N; <span class="co">// Number of observation</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>&gt; N_Y; <span class="co">// Number of years</span></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">array</span>[N] <span class="dt">int</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>, <span class="kw">upper</span>=<span class="dv">1</span>&gt; y; <span class="co">// Arrey of our observation (response)</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">array</span>[N] <span class="dt">int</span>&lt;<span class="kw">lower</span>=<span class="dv">1</span>, <span class="kw">upper</span>=N_Y&gt; year; <span class="co">// Indices of years</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>[N] effort; <span class="co">// Vector of effort (explanatory variable)</span></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>[N] jj_date; <span class="co">// Vector of observation data (explanatory variable)</span></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="co">// The parameters accepted by the model. Our model</span></span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="co">// accepts five parameters.</span></span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="kw">parameters</span> {</span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>, <span class="kw">upper</span>=<span class="dv">1</span>&gt; prob_detect;</span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span> log_a1;</span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span> log_a2;</span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span>&lt;<span class="kw">lower</span>=<span class="dv">1</span>, <span class="kw">upper</span>=<span class="dv">365</span>&gt; b2;</span>
-<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>&lt;<span class="kw">lower</span>=<span class="dv">1</span>, <span class="kw">upper</span>=<span class="dv">365</span>&gt;[N_Y] b1; <span class="co">// Value of B</span></span>
-<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a><span class="co">// The model to be estimated. We model the output</span></span>
-<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a><span class="co">// 'y' to be normally distributed with mean 'mu'</span></span>
-<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a><span class="co">// and standard deviation 'sigma'.</span></span>
-<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a><span class="kw">model</span> {</span>
-<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>  prob_detect ~ beta(<span class="dv">2</span>, <span class="dv">5</span>);</span>
-<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>  log_a1 ~ normal(-<span class="dv">1</span>, <span class="dv">1</span>);</span>
-<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>  log_a2 ~ normal(-<span class="dv">1</span>, <span class="dv">1</span>);</span>
-<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>  b1 ~ normal(<span class="dv">150</span>, <span class="dv">7</span>);</span>
-<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a>  b2 ~ normal(<span class="dv">210</span>, <span class="dv">7</span>);</span>
-<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>  y ~ bernoulli((<span class="dv">1</span> - (<span class="dv">1</span> - prob_detect)^effort) .* (<span class="dv">1</span> / (<span class="dv">1</span> + exp(-exp(log_a1) .* (jj_date - b1[year]))) .* (<span class="dv">1</span> / (<span class="dv">1</span> + exp(exp(log_a2) .* (jj_date - b2))))));</span>
-<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode stan code-with-copy"><code class="sourceCode stan"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> {</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span>&lt;<span class="kw">lower</span> = <span class="dv">1</span>&gt; N; <span class="co">// Number of observation</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span>&lt;<span class="kw">lower</span> = <span class="dv">1</span>&gt; N_Y; <span class="co">// Number of years</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">array</span>[N] <span class="dt">int</span>&lt;<span class="kw">lower</span> = <span class="dv">0</span>, <span class="kw">upper</span> = <span class="dv">1</span>&gt; y; <span class="co">// Arrey of our observation (response)</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">array</span>[N] <span class="dt">int</span>&lt;<span class="kw">lower</span> = <span class="dv">1</span>, <span class="kw">upper</span> = N_Y&gt; year; <span class="co">// Indices of years</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>[N] effort; <span class="co">// Vector of effort (explanatory variable)</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>[N] jj_date; <span class="co">// Vector of observation data (explanatory variable)</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="co">// The parameters accepted by the model. Our model</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="co">// accepts five parameters.</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="kw">parameters</span> {</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span>&lt;<span class="kw">lower</span>=<span class="dv">0</span>, <span class="kw">upper</span>=<span class="dv">1</span>&gt; prob_detect;</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span> log_a1;</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span> log_a2;</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">real</span>&lt;<span class="kw">lower</span>=<span class="dv">1</span>, <span class="kw">upper</span>=<span class="dv">365</span>&gt; b2;</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vector</span>&lt;<span class="kw">lower</span>=<span class="dv">1</span>, <span class="kw">upper</span>=<span class="dv">365</span>&gt;[N_Y] b1; <span class="co">// Value of B</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="co">// The model to be estimated. We model the output</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a><span class="co">// 'y' to be normally distributed with mean 'mu'</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a><span class="co">// and standard deviation 'sigma'.</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a><span class="kw">model</span> {</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>  prob_detect ~ beta(<span class="dv">2</span>, <span class="dv">5</span>);</span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>  log_a1 ~ normal(-<span class="dv">1</span>, <span class="dv">1</span>);</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>  log_a2 ~ normal(-<span class="dv">1</span>, <span class="dv">1</span>);</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>  b1 ~ normal(<span class="dv">150</span>, <span class="dv">7</span>);</span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>  b2 ~ normal(<span class="dv">210</span>, <span class="dv">7</span>);</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>  y ~ bernoulli((<span class="dv">1</span> - (<span class="dv">1</span> - prob_detect)^effort) .* (<span class="dv">1</span> / (<span class="dv">1</span> + exp(-exp(log_a1) .* (jj_date - b1[year]))) .* (<span class="dv">1</span> / (<span class="dv">1</span> + exp(exp(log_a2) .* (jj_date - b2))))));</span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p>We then run the model</p>
+<div class="cell">
+
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>sampl_b1_fixed_stan <span class="ot">&lt;-</span> b1_fixed_stan<span class="sc">$</span><span class="fu">sample</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> fake_data_b1, </span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">parallel_chains =</span> <span class="dv">4</span>, </span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">refresh =</span> <span class="dv">0</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<div class="sourceCode" id="cb15"><pre class="sourceCode stan code-with-copy"><code class="sourceCode stan"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>Running MCMC with <span class="dv">4</span> parallel chains...</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Chain 4 Rejecting initial value:</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Chain 4   Log probability evaluates to log(0), i.e. negative infinity.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Chain 4   Stan can't start sampling from this initial value.</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<div class="sourceCode" id="cb19"><pre class="sourceCode stan code-with-copy"><code class="sourceCode stan"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>Chain <span class="dv">2</span> finished <span class="cf">in</span> <span class="fl">5.9</span> seconds.</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>Chain <span class="dv">3</span> finished <span class="cf">in</span> <span class="fl">6.0</span> seconds.</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Chain 4 finished unexpectedly!</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<div class="sourceCode" id="cb21"><pre class="sourceCode stan code-with-copy"><code class="sourceCode stan"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>Chain <span class="dv">4</span> finished <span class="cf">in</span> <span class="fl">6.1</span> seconds.</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>Chain <span class="dv">1</span> finished <span class="cf">in</span> <span class="fl">6.4</span> seconds.</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>All <span class="dv">4</span> chains finished successfully.</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>Mean chain execution time: <span class="fl">6.1</span> seconds.</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>Total execution time: <span class="fl">6.5</span> seconds.</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<div class="callout-note callout callout-style-default callout-captioned">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-caption-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>For the code to work, I had to transform the ‘year’ variable into a factor (else had an error message about the fact that the variable was outside the bounded array)</li>
+<li>I can’t pass the b1 vector in the .join data as the function demands that the lenght of the variable in .join to be the same (1 in this case)</li>
+<li>Generated quantities does not seems to work with variable B1 value ?</li>
+</ul>
+</div>
+</div>
+<p>Inspect the distribution of our parameters posteriors</p>
+<div class="cell">
+<div class="cell-output-display">
+
+<div class="tabwid"><style>.cl-c5e494aa{}.cl-c5d94410{font-family:'Arial';font-size:11pt;font-weight:normal;font-style:normal;text-decoration:none;color:rgba(0, 0, 0, 1.00);background-color:transparent;}.cl-c5ddcd6e{margin:0;text-align:left;border-bottom: 0 solid rgba(0, 0, 0, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);padding-bottom:5pt;padding-top:5pt;padding-left:5pt;padding-right:5pt;line-height: 1;background-color:transparent;}.cl-c5ddcd78{margin:0;text-align:right;border-bottom: 0 solid rgba(0, 0, 0, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);padding-bottom:5pt;padding-top:5pt;padding-left:5pt;padding-right:5pt;line-height: 1;background-color:transparent;}.cl-c5dde95c{width:0.75in;background-color:transparent;vertical-align: middle;border-bottom: 1.5pt solid rgba(102, 102, 102, 1.00);border-top: 1.5pt solid rgba(102, 102, 102, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-c5dde966{width:0.75in;background-color:transparent;vertical-align: middle;border-bottom: 1.5pt solid rgba(102, 102, 102, 1.00);border-top: 1.5pt solid rgba(102, 102, 102, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-c5dde967{width:0.75in;background-color:transparent;vertical-align: middle;border-bottom: 0 solid rgba(0, 0, 0, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-c5dde968{width:0.75in;background-color:transparent;vertical-align: middle;border-bottom: 0 solid rgba(0, 0, 0, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-c5dde970{width:0.75in;background-color:transparent;vertical-align: middle;border-bottom: 1.5pt solid rgba(102, 102, 102, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-c5dde971{width:0.75in;background-color:transparent;vertical-align: middle;border-bottom: 1.5pt solid rgba(102, 102, 102, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}</style><table data-quarto-disable-processing="true" class="cl-c5e494aa"><thead><tr style="overflow-wrap:break-word;"><th class="cl-c5dde95c"><p class="cl-c5ddcd6e"><span class="cl-c5d94410">variable</span></p></th><th class="cl-c5dde966"><p class="cl-c5ddcd78"><span class="cl-c5d94410">mean</span></p></th><th class="cl-c5dde966"><p class="cl-c5ddcd78"><span class="cl-c5d94410">median</span></p></th><th class="cl-c5dde966"><p class="cl-c5ddcd78"><span class="cl-c5d94410">sd</span></p></th><th class="cl-c5dde966"><p class="cl-c5ddcd78"><span class="cl-c5d94410">mad</span></p></th><th class="cl-c5dde966"><p class="cl-c5ddcd78"><span class="cl-c5d94410">q5</span></p></th><th class="cl-c5dde966"><p class="cl-c5ddcd78"><span class="cl-c5d94410">q95</span></p></th><th class="cl-c5dde966"><p class="cl-c5ddcd78"><span class="cl-c5d94410">rhat</span></p></th><th class="cl-c5dde966"><p class="cl-c5ddcd78"><span class="cl-c5d94410">ess_bulk</span></p></th><th class="cl-c5dde966"><p class="cl-c5ddcd78"><span class="cl-c5d94410">ess_tail</span></p></th></tr></thead><tbody><tr style="overflow-wrap:break-word;"><td class="cl-c5dde967"><p class="cl-c5ddcd6e"><span class="cl-c5d94410">prob_detect</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.2758296</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.2743645</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.02521013</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.02512340</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.2365606</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.3188007</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.001235</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">6,996.016</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">3,140.968</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-c5dde967"><p class="cl-c5ddcd6e"><span class="cl-c5d94410">log_a1</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">-0.1611559</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">-0.1669895</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.22237168</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.21953978</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">-0.5103657</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.2065897</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.000342</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">5,521.923</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">2,747.746</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-c5dde967"><p class="cl-c5ddcd6e"><span class="cl-c5d94410">log_a2</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">-1.6497607</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">-1.6487850</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.09357909</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.09144677</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">-1.8047110</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">-1.4973375</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.002097</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">7,302.382</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">3,310.121</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-c5dde967"><p class="cl-c5ddcd6e"><span class="cl-c5d94410">b1[1]</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">158.0374077</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">158.0135000</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.03926979</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.02002880</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">156.3889500</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">159.7432500</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.002821</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">6,704.782</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">2,888.057</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-c5dde967"><p class="cl-c5ddcd6e"><span class="cl-c5d94410">b1[2]</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">140.2332035</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">140.2340000</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.88281943</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.86880360</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">138.7679500</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">141.6631000</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.001055</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">7,112.680</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">3,134.585</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-c5dde967"><p class="cl-c5ddcd6e"><span class="cl-c5d94410">b1[3]</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">143.9983208</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">143.9795000</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.88731968</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.88659480</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">142.5408500</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">145.4530500</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.004477</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">7,688.450</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">2,842.291</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-c5dde967"><p class="cl-c5ddcd6e"><span class="cl-c5d94410">b1[4]</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">142.1225653</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">142.1450000</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.15073011</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.09638270</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">140.1818000</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">143.9850000</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.000674</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">7,207.981</span></p></td><td class="cl-c5dde968"><p class="cl-c5ddcd78"><span class="cl-c5d94410">2,623.993</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-c5dde970"><p class="cl-c5ddcd6e"><span class="cl-c5d94410">b1[5]</span></p></td><td class="cl-c5dde971"><p class="cl-c5ddcd78"><span class="cl-c5d94410">154.3372310</span></p></td><td class="cl-c5dde971"><p class="cl-c5ddcd78"><span class="cl-c5d94410">154.3565000</span></p></td><td class="cl-c5dde971"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.78772691</span></p></td><td class="cl-c5dde971"><p class="cl-c5ddcd78"><span class="cl-c5d94410">0.79467360</span></p></td><td class="cl-c5dde971"><p class="cl-c5ddcd78"><span class="cl-c5d94410">152.9949000</span></p></td><td class="cl-c5dde971"><p class="cl-c5ddcd78"><span class="cl-c5d94410">155.5710500</span></p></td><td class="cl-c5dde971"><p class="cl-c5ddcd78"><span class="cl-c5d94410">1.002057</span></p></td><td class="cl-c5dde971"><p class="cl-c5ddcd78"><span class="cl-c5d94410">7,276.921</span></p></td><td class="cl-c5dde971"><p class="cl-c5ddcd78"><span class="cl-c5d94410">2,809.548</span></p></td></tr></tbody></table></div>
+</div>
+</div>
+<p>True b1 values are</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>  year  b1
+1 2010 158
+2 2011 141
+3 2012 143
+4 2013 141
+5 2014 154</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>draws <span class="ot">&lt;-</span> sampl_b1_fixed_stan<span class="sc">$</span><span class="fu">draws</span>(<span class="at">variables =</span> <span class="fu">c</span>(<span class="st">"prob_detect"</span>, <span class="st">"log_a1"</span>, <span class="st">"log_a2"</span>, <span class="st">"b1"</span>, <span class="st">"b1"</span>))</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>draws_matrix <span class="ot">&lt;-</span> posterior<span class="sc">::</span><span class="fu">as_draws_matrix</span>(draws)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>nsample <span class="ot">&lt;-</span> <span class="dv">50</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>yrep <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="at">ncol =</span> fake_data_b1<span class="sc">$</span>N, <span class="at">nrow =</span> nsample)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2</span>)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>chosen_samples <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(draws_matrix), <span class="at">replace =</span> <span class="cn">FALSE</span>, <span class="at">size =</span> nsample)</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>subset_draws <span class="ot">&lt;-</span> draws_matrix[chosen_samples, ]</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a><span class="co"># for(r in 1:nsample){</span></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a><span class="co">#   yrep[r, ] &lt;- rbinom(n = fake_data_b1$N,</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a><span class="co">#                       size = 1,</span></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a><span class="co">#                       prob = Hlogist(x = fake_data_b1$N,</span></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a><span class="co">#                                      a1 = exp(subset_draws[r, "log_a1"]),</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a><span class="co">#                                      a2 = exp(subset_draws[r, "log_a2"]),</span></span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a><span class="co">#                                      b1 = subset_draws[r, "b1"],</span></span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a><span class="co">#                                      b2 = subset_draws[r, "b2"]))</span></span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a><span class="co"># }</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="callout-note callout callout-style-default callout-captioned">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-caption-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>We need to illustrate the distribution on the posterior with <em>date</em> on the x axis. Only looking at y will not help us understand if the <span class="math inline">\(b1\)</span> are appropriately estimated.</p>
+<p>To do this, we need to predict the data (check with generated quantities) but keep the date from plotting</p>
+</div>
+</div>
+<p>It is not really surprizing that the model still work as we just added data and different values of <span class="math inline">\(b1\)</span> for those slices of data. We could do this for all parameters, but it will end up with the same results that we had in our previous analysis with all parameters.</p>
+<p>The next step is to test for an additive structure for one parameter (ex: <span class="math inline">\(b1\)</span>).</p>
 <p>** <strong>TODO</strong> **</p>
 <ul class="task-list">
 <li><input type="checkbox" disabled="" checked="">Understand why the model with presence ~ time does not seems to fit very well</li>
@@ -845,7 +913,7 @@ stan/lib/stan_math/stan/math/prim/prob/von_mises_cdf.hpp:194: note: '-Wmisleadin
 <li><input type="checkbox" disabled="" checked="">Run a model for the Long-tailed Duck data all year combined</li>
 <li><input type="checkbox" disabled="" checked="">Illustrate the model like in <a href="https://mc-stan.org/bayesplot/articles/plotting-mcmc-draws.html">this article</a></li>
 <li><input type="checkbox" disabled="">Adjust the model for a logit form</li>
-<li><input type="checkbox" disabled="">Simulate and run an additive model in Stan</li>
+<li><input type="checkbox" disabled="" checked="">Simulate and run an additive model in Stan</li>
 <li><input type="checkbox" disabled="">Simulate and run a model with all the relevant parameter varying with year</li>
 <li><input type="checkbox" disabled="">Run a model for the Long-tailed Duck with parameter varying each year</li>
 <li><input type="checkbox" disabled="">Simulate data with a hierarchical structure for one parameters (ex: b1)</li>

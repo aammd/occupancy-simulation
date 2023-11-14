@@ -1,8 +1,8 @@
 data {
-  int<lower=0> N; // Number of observation
-  int<lower=0> N_Y; // Number of years
-  array[N] int<lower=0, upper=1> y; // Arrey of our observation (response)
-  array[N] int<lower=1, upper=N_Y> year; // Indices of years
+  int<lower = 1> N; // Number of observation
+  int<lower = 1> N_Y; // Number of years
+  array[N] int<lower = 0, upper = 1> y; // Arrey of our observation (response)
+  array[N] int<lower = 1, upper = N_Y> year; // Indices of years
   vector[N] effort; // Vector of effort (explanatory variable)
   vector[N] jj_date; // Vector of observation data (explanatory variable)
 }
@@ -30,4 +30,3 @@ model {
   
   y ~ bernoulli((1 - (1 - prob_detect)^effort) .* (1 / (1 + exp(-exp(log_a1) .* (jj_date - b1[year]))) .* (1 / (1 + exp(exp(log_a2) .* (jj_date - b2))))));
 }
-

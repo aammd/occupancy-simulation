@@ -879,7 +879,7 @@ We modify our Stan code so that a $b_1$ parameter is estimated for each year
 ```{r}
 #| class-output: stan
 #| echo: false
-#| #| error: false
+#| error: false
 
 b1_fixed_stan <- cmdstanr::cmdstan_model(stan_file = "b1_fixed.stan",
   pedantic = TRUE)
@@ -889,7 +889,85 @@ b1_fixed_stan
 
 We then run the model
 
+```{r}
+#| echo: false
 
+# Remove b1 in .join
+fake_data_b1[7][[1]] <- fake_data_b1[7][[1]][-4]
+```
+
+```{r}
+#| class-output: stan
+#| error: false
+
+sampl_b1_fixed_stan <- b1_fixed_stan$sample(
+  data = fake_data_b1, 
+  parallel_chains = 4, 
+  refresh = 0
+)
+```
+
+::: {.callout-note}
+- For the code to work, I had to transform the 'year' variable into a factor (else had an error message about the fact that the variable was outside the bounded array)
+- I can't pass the b1 vector in the .join data as the function demands that the lenght of the variable in .join to be the same (1 in this case)
+- Generated quantities does not seems to work with variable B1 value ?
+:::
+
+Inspect the distribution of our parameters posteriors
+
+```{r}
+#| echo: false
+
+sampl_b1_fixed_stan$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b1")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+```
+
+True b1 values are
+
+```{r}
+#| echo: false
+b1_year
+```
+
+```{r}
+
+draws <- sampl_b1_fixed_stan$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b1"))
+draws_matrix <- posterior::as_draws_matrix(draws)
+
+nsample <- 50
+yrep <- matrix(0, ncol = fake_data_b1$N, nrow = nsample)
+
+set.seed(2)
+
+chosen_samples <- sample(1:nrow(draws_matrix), replace = FALSE, size = nsample)
+subset_draws <- draws_matrix[chosen_samples, ]
+
+
+
+# for(r in 1:nsample){
+#   yrep[r, ] <- rbinom(n = fake_data_b1$N,
+#                       size = 1,
+#                       prob = Hlogist(x = fake_data_b1$N,
+#                                      a1 = exp(subset_draws[r, "log_a1"]),
+#                                      a2 = exp(subset_draws[r, "log_a2"]),
+#                                      b1 = subset_draws[r, "b1"],
+#                                      b2 = subset_draws[r, "b2"]))
+# }
+
+```
+
+::: {.callout-note}
+
+We need to illustrate the distribution on the posterior with *date* on the x axis. Only looking at y will not help us understand if the $b1$ are appropriately estimated. 
+
+To do this, we need to predict the data (check with generated quantities) but keep the date from plotting
+
+:::
+
+It is not really surprizing that the model still work as we just added data and different values of $b1$ for those slices of data. We could do this for all parameters, but it will end up with the same results that we had in our previous analysis with all parameters.
+
+The next step is to test for an additive structure for one parameter (ex: $b1$).
 
 ** **TODO** **
 
@@ -900,7 +978,7 @@ We then run the model
 - [X] Run a model for the Long-tailed Duck data all year combined
 - [X] Illustrate the model like in [this article](https://mc-stan.org/bayesplot/articles/plotting-mcmc-draws.html)
 - [ ] Adjust the model for a logit form
-- [ ] Simulate and run an additive model in Stan
+- [x] Simulate and run an additive model in Stan
 - [ ] Simulate and run a model with all the relevant parameter varying with year
 - [ ] Run a model for the Long-tailed Duck with parameter varying each year
 - [ ] Simulate data with a hierarchical structure for one parameters (ex: b1)

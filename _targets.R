@@ -188,13 +188,13 @@ list(
       )
   ),
   
-  # # Run a Stan model for the fake data with B1 varying in each year
-  # tar_stan_mcmc(
-  #   b1_fixed_mod,
-  #   stan_files = "b1_fixed.stan",
-  #   data = fake_data_b1, 
-  #   parallel_chains = 4
-  # ),
+  # Run a Stan model for the fake data with B1 varying in each year
+  tar_stan_mcmc(
+    b1_fixed_mod,
+    stan_files = "b1_fixed.stan",
+    data = fake_data_b1,
+    parallel_chains = 4
+  ),
   # tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
   #   fixed_eff_time_log,
   #   stan_files = "occ_eff_time_log.stan",
