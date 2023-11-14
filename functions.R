@@ -320,7 +320,7 @@ stan_duck <- function(data) {
 # Detection ~ Effort
 # Fixed parameters values
 simulate_add_b1 <-
-  function(log_a1, log_a2, b2, n.year, prob_detect, nsample = 200) {
+  function(log_a1, log_a2, b2, n.year, prob_detect, nsample = 200, n_new = 20) {
 
     df_sim <- tibble()
     
@@ -358,9 +358,8 @@ simulate_add_b1 <-
     
     
     ## make a fake data-frame for predicting
-    n_new <- 20
     newdat <- expand.grid(
-      newdate = seq(from = 120, to = 300, length.out = n_new),
+      newdate = seq(from = 120, to = 250, length.out = n_new),
       newyear = 1:n.year)
     
     
@@ -373,13 +372,95 @@ simulate_add_b1 <-
       effort = df_sim$effort,
       n_new = n_new,
       newdate = newdat$newdate,
-      newyear = newdat$newyear#,
-      # .join_data = list(
-      #   prob_detect = prob_detect,
-      #   log_a1 = log_a1,
-      #   log_a2 = log_a2,
-      #   b1 = b1,
-      #   b2 = b2
-      # )
+      newyear = newdat$newyear,
+      .join_data = list(
+        prob_detect = prob_detect,
+        log_a1 = log_a1,
+        log_a2 = log_a2,
+        b1 = b1,
+        b2 = b2
+      )
+    )
+  }
+
+
+
+
+# Function to simulate data with :
+# Presence ~ Date
+# b1 & b2 ~ Year
+# log_a1 & log_a2 ~ Year
+# Detection ~ Effort
+# Fixed parameters values
+simulate_add_all <-
+  function(n.year, prob_detect, nsample = 200, n_new = 20) {
+    
+    df_sim <- tibble()
+    
+    # Draw a new b1 for each year
+    b1 <- floor(runif(n.year, 140, 160))
+    
+    # Draw a new b1 for each year
+    b2 <- floor(runif(n.year, 190, 210))
+    
+    # Draw a new b1 for each year
+    log_a1 <- rnorm(n.year, -1, 0.5)
+    
+    # Draw a new b1 for each year
+    log_a2 <- rnorm(n.year,-1, 0.5)
+    
+    for (i in 1:n.year) {
+      
+      df_year <- tibble(
+        sample_id = 1:nsample,
+        year = 2009 + i,
+        jj_date = floor(runif(
+          n = nsample,
+          min = 130,
+          max = 240
+        )),
+        real_pres = prob_pres_HOF(exp(log_a1[i]),
+                                  exp(log_a2[i]),
+                                  b1[i],
+                                  b2[i],
+                                  jj_date),
+        effort = round(runif(
+          n = nsample,
+          min = 1, max = 25
+        ))
+      ) |>
+        rowwise() |>
+        mutate(
+          pa = 1 - (1 - prob_detect) ^ effort,
+          y = rbinom(n = 1, p = pa, size = 1) * rbinom(n = 1, p = real_pres, size = 1)
+        )
+      
+      df_sim <- rbind(df_sim, df_year)
+    }
+    
+    
+    ## make a fake data-frame for predicting
+    newdat <- expand.grid(
+      newdate = seq(from = 120, to = 250, length.out = n_new),
+      newyear = 1:n.year)
+    
+    
+    list(
+      N = nsample*n.year,
+      N_Y = n.year,
+      y = df_sim$y,
+      year = as.factor(df_sim$year),
+      jj_date = df_sim$jj_date,
+      effort = df_sim$effort,
+      n_new = n_new,
+      newdate = newdat$newdate,
+      newyear = newdat$newyear,
+      .join_data = list(
+        prob_detect = prob_detect,
+        log_a1 = log_a1,
+        log_a2 = log_a2,
+        b1 = b1,
+        b2 = b2
+      )
     )
   }

@@ -844,6 +844,8 @@ Not really surprising that the interval is bigger when the $a_i$ is lower (more 
 
 The next step in our analysis is to slowly increase the complexity of the model. As we will want to estimate the parameters for all years and all species, we will need to transform our model into a hierarchical one (as we assume that for each species, the parameters have a certain distribution). Before doing that, we transform our model to account for fixed effect of year on our parameters (thus, they are estimated as factors, independently from each other). 
 
+## One parameter varying with year
+
 
 First, we have to simulate data. We are gonna start one parameter at the time and begin with $b_1$. We simulate 200 observations per year for 5 years. We also add the variable "year". The data looks like this :
 
@@ -881,36 +883,20 @@ We modify our Stan code so that a $b_1$ parameter is estimated for each year
 #| echo: false
 #| error: false
 
-b1_fixed_stan <- cmdstanr::cmdstan_model(stan_file = "b1_fixed.stan",
-  pedantic = TRUE)
+b1_fixed_stan <- cmdstanr::cmdstan_model(stan_file = "b1_fixed.stan")
 
 b1_fixed_stan
 ```
 
-We then run the model
-
 ```{r}
 #| echo: false
 
-# Remove b1 in .join
-fake_data_b1[7][[1]] <- fake_data_b1[7][[1]][-4]
-```
-
-```{r}
-#| class-output: stan
-#| error: false
-
-sampl_b1_fixed_stan <- b1_fixed_stan$sample(
-  data = fake_data_b1, 
-  parallel_chains = 4, 
-  refresh = 0
-)
+tar_load(b1_fixed_mod_mcmc_b1_fixed)
 ```
 
 ::: {.callout-note}
 - For the code to work, I had to transform the 'year' variable into a factor (else had an error message about the fact that the variable was outside the bounded array)
-- I can't pass the b1 vector in the .join data as the function demands that the lenght of the variable in .join to be the same (1 in this case)
-- Generated quantities does not seems to work with variable B1 value ?
+- I can't pass the b1 vector in the .join data as the function demands that the length of the variable in .join to be the same (1 in this case)
 :::
 
 Inspect the distribution of our parameters posteriors
@@ -918,7 +904,7 @@ Inspect the distribution of our parameters posteriors
 ```{r}
 #| echo: false
 
-sampl_b1_fixed_stan$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b1")) |> 
+b1_fixed_mod_mcmc_b1_fixed$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b1")) |> 
   posterior::summarise_draws() |> 
   flextable::flextable()
 ```
@@ -931,57 +917,88 @@ b1_year
 ```
 
 
-Visualize
+### Visualize
 
 ```{r}
-sampl_b1_fixed_stan |> 
+b1_fixed_mod_mcmc_b1_fixed |> 
   tidybayes::gather_rvars(mu_line[i]) |> 
   dplyr::bind_cols(as.data.frame(fake_data_b1[c("newdate", "newyear")])) |> 
   ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
   tidybayes::stat_lineribbon() +
-  theme_classic()
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+
+It is not really surprizing that the model still work as we just added data and different values of $b1$ for those slices of data. We could do this for all parameters, but it will end up with the same results that we had in our previous analysis with all parameters.
+
+The next step is to test for all parameters.
+
+## All parameters
+
+As for before, we start to generate fake data. For each year, we will make the following parameters vary : $log_a1$, $log_a2$, $b1$ and $b2$. The only parameter that we keep constant is the probability of detection, as we assume that it should no vary, for one species, between years. 
+
+```{r}
+#| echo: false
+
+tar_load(fake_data_additive)
+str(fake_data_additive)
 ```
 
 
 
 ```{r}
+#| echo: false
+#| error: false
 
-draws <- sampl_b1_fixed_stan$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b1"))
-draws_matrix <- posterior::as_draws_matrix(draws)
+b1_year <- data.frame(year = unique(fake_data_additive$year),
+                      b1 = fake_data_additive$.join_data$b1)
 
-nsample <- 50
-yrep <- matrix(0, ncol = fake_data_b1$N, nrow = nsample)
+b2_year <- data.frame(year = unique(fake_data_additive$year),
+                      b2 = fake_data_additive$.join_data$b2)
 
-set.seed(2)
-
-chosen_samples <- sample(1:nrow(draws_matrix), replace = FALSE, size = nsample)
-subset_draws <- draws_matrix[chosen_samples, ]
-
-
-
-# for(r in 1:nsample){
-#   yrep[r, ] <- rbinom(n = fake_data_b1$N,
-#                       size = 1,
-#                       prob = Hlogist(x = fake_data_b1$N,
-#                                      a1 = exp(subset_draws[r, "log_a1"]),
-#                                      a2 = exp(subset_draws[r, "log_a2"]),
-#                                      b1 = subset_draws[r, "b1"],
-#                                      b2 = subset_draws[r, "b2"]))
-# }
+fake_data_additive |> 
+  as.data.frame() |> 
+  group_by(y, year, jj_date) |> 
+  count() |> 
+  ggplot(aes(x = jj_date, y = y)) +
+  geom_point(alpha = 0.2, aes(size = n)) +
+  theme_classic() +
+  geom_vline(data = b1_year, mapping = aes(xintercept = b1)) +
+  geom_vline(data = b2_year, mapping = aes(xintercept = b2)) +
+  facet_wrap(~ year)
 
 ```
 
-::: {.callout-note}
+```{r}
+#| class-output: stan
+#| echo: false
+#| error: false
 
-We need to illustrate the distribution on the posterior with *date* on the x axis. Only looking at y will not help us understand if the $b1$ are appropriately estimated. 
+all_fixed_stan <- cmdstanr::cmdstan_model(stan_file = "all_fixed.stan")
 
-To do this, we need to predict the data (check with generated quantities) but keep the date from plotting
+all_fixed_stan
+```
 
-:::
+```{r}
+#| echo: false
 
-It is not really surprizing that the model still work as we just added data and different values of $b1$ for those slices of data. We could do this for all parameters, but it will end up with the same results that we had in our previous analysis with all parameters.
+tar_load(all_fixed_mod_mcmc_all_fixed)
 
-The next step is to test for an additive structure for one parameter (ex: $b1$).
+all_fixed_mod_mcmc_all_fixed$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+```
+
+```{r}
+all_fixed_mod_mcmc_all_fixed |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_additive[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
 
 ** **TODO** **
 

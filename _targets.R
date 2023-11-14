@@ -182,9 +182,10 @@ list(
         log_a1 = log(1),
         log_a2 = log(0.2),
         b2 = 200,
-        n.year = 5,
+        n.year = 6,
         prob_detect = 0.3,
-        nsample = 200
+        nsample = 200,
+        n_new = 100
       )
   ),
   
@@ -195,6 +196,29 @@ list(
     data = fake_data_b1,
     parallel_chains = 4
   ),
+  
+  
+  # Simulate data with varying parameter value each year
+  tar_target(
+    fake_data_additive,
+    simulate_add_all(
+      n.year = 6,
+      prob_detect = 0.3,
+      nsample = 200,
+      n_new = 100
+    )
+  ),
+  
+  # Run a Stan model for the fake data with all parameters varying in each year
+  tar_stan_mcmc(
+    all_fixed_mod,
+    stan_files = "all_fixed.stan",
+    data = fake_data_additive,
+    parallel_chains = 4
+  ),
+  
+  
+  
   # tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
   #   fixed_eff_time_log,
   #   stan_files = "occ_eff_time_log.stan",
