@@ -198,6 +198,72 @@ list(
   ),
   
   
+  # Simulate data with varying B1 & B2 value each year
+  tar_target(
+    fake_data_b1_b2,
+    simulate_add_b1_b2(
+      log_a1 = log(1),
+      log_a2 = log(0.2),
+      n.year = 6,
+      prob_detect = 0.3,
+      nsample = 200,
+      n_new = 100
+    )
+  ),
+  
+  # Run a Stan model for the fake data with B1 & B2 varying in each year
+  tar_stan_mcmc(
+    b1_b2_fixed_mod,
+    stan_files = "b1_b2_fixed.stan",
+    data = fake_data_b1_b2,
+    parallel_chains = 4
+  ),
+  
+  
+  # Simulate data with varying log_a1 value each year
+  tar_target(
+    fake_data_a1,
+    simulate_add_a1(
+      log_a2 = log(0.2),
+      b1 = 160,
+      b2 = 200,
+      n.year = 6,
+      prob_detect = 0.3,
+      nsample = 200,
+      n_new = 100
+    )
+  ),
+  
+  # Run a Stan model for the fake data with a1 varying in each year
+  tar_stan_mcmc(
+    a1_fixed_mod,
+    stan_files = "a1_fixed.stan",
+    data = fake_data_a1,
+    parallel_chains = 4
+  ),
+  
+  
+  # Simulate data with varying log_a1 & log_a2 value each year
+  tar_target(
+    fake_data_a1_a2,
+    simulate_add_a1_a2(
+      b1 = 150,
+      b2 = 220,
+      n.year = 6,
+      prob_detect = 0.3,
+      nsample = 200,
+      n_new = 100
+    )
+  ),
+  
+  # Run a Stan model for the fake data with a1 & a2 varying in each year
+  tar_stan_mcmc(
+    a1_a2_fixed_mod,
+    stan_files = "a1_a2_fixed.stan",
+    data = fake_data_a1_a2,
+    parallel_chains = 4
+  ),
+  
   # Simulate data with varying parameter value each year
   tar_target(
     fake_data_additive,

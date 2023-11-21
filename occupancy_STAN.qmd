@@ -934,6 +934,153 @@ It is not really surprizing that the model still work as we just added data and 
 
 The next step is to test for all parameters.
 
+## Two b parameter varying with year
+
+```{r}
+#| echo: false
+#| error: false
+
+tar_load(fake_data_b1_b2)
+
+b1_b2_year <- data.frame(year = unique(fake_data_b1_b2$year),
+                          b1 = fake_data_b1_b2$.join_data$b1,
+                          b2 = fake_data_b1_b2$.join_data$b2)
+
+fake_data_b1_b2 |> 
+  as.data.frame() |> 
+  group_by(y, year, jj_date) |> 
+  count() |> 
+  ggplot(aes(x = jj_date, y = y)) +
+  geom_point(alpha = 0.2, aes(size = n)) +
+  theme_classic() +
+  geom_vline(data = b1_b2_year, mapping = aes(xintercept = b1)) +
+  geom_vline(data = b1_b2_year, mapping = aes(xintercept = b2)) +
+  facet_wrap(~ year)
+
+```
+
+
+```{r}
+#| echo: false
+
+tar_load(b1_b2_fixed_mod_mcmc_b1_b2_fixed)
+
+b1_b2_fixed_mod_mcmc_b1_b2_fixed$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+```
+
+```{r}
+b1_b2_fixed_mod_mcmc_b1_b2_fixed |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_b1_b2[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+## One $a$ parameter varying with year
+
+```{r}
+#| echo: false
+#| error: false
+
+tar_load(fake_data_a1)
+
+a1_year <- data.frame(year = unique(fake_data_a1$year),
+                      a1 = fake_data_a1$.join_data$log_a1,
+                      b1 = fake_data_a1$.join_data$b1, 
+                      xlim = rep(seq(130, 240, by = 1), each = length(unique(fake_data_a1$year))))
+
+
+a1_year$y <-  with(a1_year, 1 / (1 + exp(-exp(a1) * (xlim - b1))))
+
+fake_data_a1 |> 
+  as.data.frame() |> 
+  group_by(y, year, jj_date) |> 
+  count() |> 
+  ggplot(aes(x = jj_date, y = y)) +
+  geom_point(alpha = 0.2, aes(size = n)) +
+  theme_classic() +
+  geom_line(data = a1_year, mapping = aes(x = xlim, y = y)) +
+  facet_wrap(~ year)
+
+```
+
+```{r}
+#| echo: false
+
+tar_load(a1_fixed_mod_mcmc_a1_fixed)
+
+a1_fixed_mod_mcmc_a1_fixed$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+```
+
+```{r}
+a1_fixed_mod_mcmc_a1_fixed |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_b1_b2[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+
+## Two $a$ parameter varying with year
+
+```{r}
+#| echo: false
+#| error: false
+
+tar_load(fake_data_a1_a2)
+
+a1_a2_year <- data.frame(year = unique(fake_data_a1_a2$year),
+                         a1 = fake_data_a1_a2$.join_data$log_a1,
+                         a2 = fake_data_a1_a2$.join_data$log_a2,
+                         b1 = fake_data_a1_a2$.join_data$b1,
+                         b2 = fake_data_a1_a2$.join_data$b2,
+                         xlim = rep(seq(130, 240, by = 1), each = length(unique(fake_data_a1_a2$year))))
+
+
+a1_a2_year$y <-  with(a1_a2_year, 1 / (1 + exp(-exp(a1) * (xlim - b1))) * 1 / (1 + exp(exp(a2) * (xlim - b2))))
+
+fake_data_a1_a2 |> 
+  as.data.frame() |> 
+  group_by(y, year, jj_date) |> 
+  count() |> 
+  ggplot(aes(x = jj_date, y = y)) +
+  geom_point(alpha = 0.2, aes(size = n)) +
+  theme_classic() +
+  geom_line(data = a1_a2_year, mapping = aes(x = xlim, y = y)) +
+  facet_wrap(~ year)
+
+```
+
+```{r}
+#| echo: false
+
+tar_load(a1_a2_fixed_mod_mcmc_a1_a2_fixed)
+
+a1_a2_fixed_mod_mcmc_a1_a2_fixed$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+```
+
+```{r}
+a1_a2_fixed_mod_mcmc_a1_a2_fixed |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_b1_b2[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+
+
 ## All parameters
 
 As for before, we start to generate fake data. For each year, we will make the following parameters vary : $log_a1$, $log_a2$, $b1$ and $b2$. The only parameter that we keep constant is the probability of detection, as we assume that it should no vary, for one species, between years. 
