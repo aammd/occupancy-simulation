@@ -264,6 +264,52 @@ list(
     parallel_chains = 4
   ),
   
+  
+  # Simulate logit data
+  tar_target(
+    fake_data_logit_a,
+    simulate_a_logit(
+      b1 = 150,
+      b2 = 220,
+      n.year = 6,
+      prob_detect = 0.3,
+      nsample = 200,
+      n_new = 100
+    )
+  ),
+  
+  # Run a Stan model for our logit of a2 detour
+  tar_stan_mcmc(
+    logit_a1,
+    stan_files = "a1_logit.stan",
+    data = fake_data_logit_a,
+    parallel_chains = 4
+  ),
+  
+  
+  # Second detour with a logis HOF function
+  # Generate the data
+  tar_target(
+    fake_data_logis,
+    simulate_logis(
+      b1 = 150,
+      b2 = 220,
+      n.year = 6,
+      prob_detect = 0.3,
+      nsample = 200,
+      n_new = 100
+      )
+  ),
+  
+  # Run a Stan model for our logis of a detour
+  tar_stan_mcmc(
+    logis_a,
+    stan_files = "a_logis.stan",
+    data = fake_data_logis,
+    parallel_chains = 4
+  ),
+  
+  
   # Simulate data with varying parameter value each year
   tar_target(
     fake_data_additive,

@@ -1072,14 +1072,91 @@ a1_a2_fixed_mod_mcmc_a1_a2_fixed$draws(variables = c("prob_detect", "log_a1", "l
 ```{r}
 a1_a2_fixed_mod_mcmc_a1_a2_fixed |> 
   tidybayes::gather_rvars(mu_line[i]) |> 
-  dplyr::bind_cols(as.data.frame(fake_data_b1_b2[c("newdate", "newyear")])) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_a1_a2[c("newdate", "newyear")])) |> 
   ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
   tidybayes::stat_lineribbon() +
   theme_classic() +
   facet_wrap(~ newyear)
 ```
 
+## Logit detour for log_a2
 
+```{r}
+#| echo: false
+#| error: false
+
+tar_load(fake_data_logit_a)
+
+a1_logit_year <- data.frame(year = unique(fake_data_logit_a$year),
+                         a1 = fake_data_logit_a$.join_data$log_a1,
+                         logit_f = fake_data_logit_a$.join_data$logit_f,
+                         b1 = fake_data_logit_a$.join_data$b1,
+                         b2 = fake_data_logit_a$.join_data$b2,
+                         xlim = rep(seq(130, 240, by = 1), each = length(unique(fake_data_logit_a$year))))
+
+
+a1_logit_year$y <-  with(a1_logit_year, 1 / (1 + exp(-exp(a1) * (xlim - b1))) * 1 / (1 + exp(exp(a1 + plogis(logit_f, log.p = TRUE)) * (xlim - b2))))
+
+fake_data_logit_a |> 
+  as.data.frame() |> 
+  group_by(y, year, jj_date) |> 
+  count() |> 
+  ggplot(aes(x = jj_date, y = y)) +
+  geom_point(alpha = 0.2, aes(size = n)) +
+  theme_classic() +
+  geom_line(data = a1_logit_year, mapping = aes(x = xlim, y = y)) +
+  facet_wrap(~ year)
+
+```
+
+
+```{r}
+tar_load(logit_a1_mcmc_a1_logit)
+
+logit_a1_mcmc_a1_logit$draws(variables = c("prob_detect", "log_a1", "logit_f", "b1", "b2")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+```
+
+```{r}
+logit_a1_mcmc_a1_logit |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_a1_a2[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+## Logis detour in the stan code
+
+```{r}
+#| echo: false
+#| error: false
+
+tar_load(fake_data_logis)
+
+logis_year <- data.frame(year = unique(fake_data_logis$year),
+                         a = fake_data_logis$.join_data$a,
+                         logis_f = fake_data_logis$.join_data$logis_f,
+                         b1 = fake_data_logis$.join_data$b1,
+                         b2 = fake_data_logis$.join_data$b2,
+                         xlim = rep(seq(130, 240, by = 1), each = length(unique(fake_data_logis$year))))
+
+
+logis_year$y <-  with(logis_year, plogis(a*logis_f * (xlim - b1)) * plogis(-a*(1-logis_f) * (xlim - b2)))
+
+fake_data_logis |> 
+  as.data.frame() |> 
+  group_by(y, year, jj_date) |> 
+  count() |> 
+  ggplot(aes(x = jj_date, y = y)) +
+  geom_point(alpha = 0.2, aes(size = n)) +
+  theme_classic() +
+  geom_line(data = logis_year, mapping = aes(x = xlim, y = y)) +
+  facet_wrap(~ year)
+
+```
 
 ## All parameters
 

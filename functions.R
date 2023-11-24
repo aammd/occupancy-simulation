@@ -603,6 +603,161 @@ simulate_add_a1_a2 <-
   }
 
 
+# LOGIT
+# Function to simulate data with :
+# Presence ~ Date
+# log_a1 ~ Year
+# log_a2 ~ Year
+# Detection ~ Effort
+# Fixed parameters values
+simulate_a_logit <-
+  function(b1, b2, n.year, prob_detect, nsample = 200, n_new = 20) {
+    
+    df_sim <- tibble()
+    
+    # Draw a new log_a1 for each year
+    log_a1 <- rnorm(n.year, -1, 0.2)
+    # Draw a new log_a2 for each year
+    logit_f <- rnorm(n.year, 1, 0.5)
+    
+    for (i in 1:n.year) {
+      
+      df_year <- tibble(
+        sample_id = 1:nsample,
+        year = 2009 + i,
+        jj_date = floor(runif(
+          n = nsample,
+          min = 130,
+          max = 240
+        )),
+        real_pres = prob_pres_HOF(exp(log_a1[i]),
+                                  exp(log_a1[i] + plogis(logit_f[i], log.p = TRUE)),
+                                  b1,
+                                  b2,
+                                  jj_date),
+        effort = round(runif(
+          n = nsample,
+          min = 1, max = 25
+        ))
+      ) |>
+        rowwise() |>
+        mutate(
+          pa = 1 - (1 - prob_detect) ^ effort,
+          y = rbinom(n = 1, p = pa, size = 1) * rbinom(n = 1, p = real_pres, size = 1)
+        )
+      
+      df_sim <- rbind(df_sim, df_year)
+    }
+    
+    
+    ## make a fake data-frame for predicting
+    newdat <- expand.grid(
+      newdate = seq(from = 120, to = 250, length.out = n_new),
+      newyear = 1:n.year)
+    
+    
+    list(
+      N = nsample*n.year,
+      N_Y = n.year,
+      y = df_sim$y,
+      year = as.factor(df_sim$year),
+      jj_date = df_sim$jj_date,
+      effort = df_sim$effort,
+      n_new = n_new,
+      newdate = newdat$newdate,
+      newyear = newdat$newyear,
+      .join_data = list(
+        prob_detect = prob_detect,
+        log_a1 = log_a1,
+        logit_f = logit_f,
+        b1 = b1,
+        b2 = b2
+      )
+    )
+  }
+
+
+
+## HOF curve logis
+prob_pres_HOF_logis <- 
+  function(a, logis_f, b1, b2, jj_date){
+    plogis(a*logis_f * (jj_date - b1)) * plogis(-a*(1-logis_f) * (jj_date - b2))
+}
+
+# LOGIT
+# Function to simulate data with :
+# Presence ~ Date
+# log_a1 ~ Year
+# log_a2 ~ Year
+# Detection ~ Effort
+# Fixed parameters values
+simulate_logis <-
+  function(b1, b2, n.year, prob_detect, nsample = 200, n_new = 20) {
+    
+    df_sim <- tibble()
+    
+    # Draw a new log_a1 for each year
+    a <- rnorm(n.year, 0.5, 0.1)
+    # Draw a fraction added/subtracted to a
+    logis_f <- plogis(rnorm(n.year, 0.9, 0.2))
+    
+    for (i in 1:n.year) {
+      
+      df_year <- tibble(
+        sample_id = 1:nsample,
+        year = 2009 + i,
+        jj_date = floor(runif(
+          n = nsample,
+          min = 130,
+          max = 240
+        )),
+        real_pres = prob_pres_HOF_logis(a = a[i],
+                                        logis_f = logis_f[i],
+                                        b1 = b1,
+                                        b2 = b2,
+                                        jj_date = jj_date),
+        effort = round(runif(
+          n = nsample,
+          min = 1, max = 25
+        ))
+      ) |>
+        rowwise() |>
+        mutate(
+          pa = 1 - (1 - prob_detect) ^ effort,
+          y = rbinom(n = 1, p = pa, size = 1) * rbinom(n = 1, p = real_pres, size = 1)
+        )
+      
+      df_sim <- rbind(df_sim, df_year)
+    }
+    
+    
+    ## make a fake data-frame for predicting
+    newdat <- expand.grid(
+      newdate = seq(from = 120, to = 250, length.out = n_new),
+      newyear = 1:n.year)
+    
+    
+    list(
+      N = nsample*n.year,
+      N_Y = n.year,
+      y = df_sim$y,
+      year = as.factor(df_sim$year),
+      jj_date = df_sim$jj_date,
+      effort = df_sim$effort,
+      n_new = n_new,
+      newdate = newdat$newdate,
+      newyear = newdat$newyear,
+      .join_data = list(
+        prob_detect = prob_detect,
+        a = a,
+        logis_f = logis_f,
+        b1 = b1,
+        b2 = b2
+      )
+    )
+  }
+
+
 
 # Function to simulate data with :
 # Presence ~ Date
