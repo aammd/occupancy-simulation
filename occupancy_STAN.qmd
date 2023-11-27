@@ -852,28 +852,8 @@ First, we have to simulate data. We are gonna start one parameter at the time an
 ```{r}
 #| echo: false
 
-tar_load(fake_data_b1)
-str(fake_data_b1)
-```
-
-
-```{r}
-#| echo: false
-#| error: false
-
-b1_year <- data.frame(year = unique(fake_data_b1$year),
-                      b1 = fake_data_b1$.join_data$b1)
-
-fake_data_b1 |> 
-  as.data.frame() |> 
-  group_by(y, year, jj_date) |> 
-  count() |> 
-  ggplot(aes(x = jj_date, y = y)) +
-  geom_point(alpha = 0.2, aes(size = n)) +
-  theme_classic() +
-  geom_vline(data = b1_year, mapping = aes(xintercept = b1)) +
-  facet_wrap(~ year)
-
+tar_load(plot_fake_data_b1)
+plot_fake_data_b1
 ```
 
 We modify our Stan code so that a $b_1$ parameter is estimated for each year 
@@ -913,13 +893,17 @@ True b1 values are
 
 ```{r}
 #| echo: false
-b1_year
+tar_load(fake_data_b1)
+fake_data_b1$.join_data$b1
 ```
 
 
 ### Visualize
 
 ```{r}
+#| echo: false
+tar_load(fake_data_b1)
+
 b1_fixed_mod_mcmc_b1_fixed |> 
   tidybayes::gather_rvars(mu_line[i]) |> 
   dplyr::bind_cols(as.data.frame(fake_data_b1[c("newdate", "newyear")])) |> 
@@ -940,22 +924,8 @@ The next step is to test for all parameters.
 #| echo: false
 #| error: false
 
-tar_load(fake_data_b1_b2)
-
-b1_b2_year <- data.frame(year = unique(fake_data_b1_b2$year),
-                          b1 = fake_data_b1_b2$.join_data$b1,
-                          b2 = fake_data_b1_b2$.join_data$b2)
-
-fake_data_b1_b2 |> 
-  as.data.frame() |> 
-  group_by(y, year, jj_date) |> 
-  count() |> 
-  ggplot(aes(x = jj_date, y = y)) +
-  geom_point(alpha = 0.2, aes(size = n)) +
-  theme_classic() +
-  geom_vline(data = b1_b2_year, mapping = aes(xintercept = b1)) +
-  geom_vline(data = b1_b2_year, mapping = aes(xintercept = b2)) +
-  facet_wrap(~ year)
+tar_load(plot_fake_data_b1_b2)
+plot_fake_data_b1_b2
 
 ```
 
@@ -971,6 +941,9 @@ b1_b2_fixed_mod_mcmc_b1_b2_fixed$draws(variables = c("prob_detect", "log_a1", "l
 ```
 
 ```{r}
+#| echo: false
+tar_load(fake_data_b1_b2)
+
 b1_b2_fixed_mod_mcmc_b1_b2_fixed |> 
   tidybayes::gather_rvars(mu_line[i]) |> 
   dplyr::bind_cols(as.data.frame(fake_data_b1_b2[c("newdate", "newyear")])) |> 
@@ -985,26 +958,8 @@ b1_b2_fixed_mod_mcmc_b1_b2_fixed |>
 ```{r}
 #| echo: false
 #| error: false
-
-tar_load(fake_data_a1)
-
-a1_year <- data.frame(year = unique(fake_data_a1$year),
-                      a1 = fake_data_a1$.join_data$log_a1,
-                      b1 = fake_data_a1$.join_data$b1, 
-                      xlim = rep(seq(130, 240, by = 1), each = length(unique(fake_data_a1$year))))
-
-
-a1_year$y <-  with(a1_year, 1 / (1 + exp(-exp(a1) * (xlim - b1))))
-
-fake_data_a1 |> 
-  as.data.frame() |> 
-  group_by(y, year, jj_date) |> 
-  count() |> 
-  ggplot(aes(x = jj_date, y = y)) +
-  geom_point(alpha = 0.2, aes(size = n)) +
-  theme_classic() +
-  geom_line(data = a1_year, mapping = aes(x = xlim, y = y)) +
-  facet_wrap(~ year)
+tar_load(plot_fake_data_a1)
+plot_fake_data_a1
 
 ```
 
@@ -1019,6 +974,9 @@ a1_fixed_mod_mcmc_a1_fixed$draws(variables = c("prob_detect", "log_a1", "log_a2"
 ```
 
 ```{r}
+#| echo: false
+tar_load(fake_data_b1_b2)
+
 a1_fixed_mod_mcmc_a1_fixed |> 
   tidybayes::gather_rvars(mu_line[i]) |> 
   dplyr::bind_cols(as.data.frame(fake_data_b1_b2[c("newdate", "newyear")])) |> 
@@ -1035,27 +993,8 @@ a1_fixed_mod_mcmc_a1_fixed |>
 #| echo: false
 #| error: false
 
-tar_load(fake_data_a1_a2)
-
-a1_a2_year <- data.frame(year = unique(fake_data_a1_a2$year),
-                         a1 = fake_data_a1_a2$.join_data$log_a1,
-                         a2 = fake_data_a1_a2$.join_data$log_a2,
-                         b1 = fake_data_a1_a2$.join_data$b1,
-                         b2 = fake_data_a1_a2$.join_data$b2,
-                         xlim = rep(seq(130, 240, by = 1), each = length(unique(fake_data_a1_a2$year))))
-
-
-a1_a2_year$y <-  with(a1_a2_year, 1 / (1 + exp(-exp(a1) * (xlim - b1))) * 1 / (1 + exp(exp(a2) * (xlim - b2))))
-
-fake_data_a1_a2 |> 
-  as.data.frame() |> 
-  group_by(y, year, jj_date) |> 
-  count() |> 
-  ggplot(aes(x = jj_date, y = y)) +
-  geom_point(alpha = 0.2, aes(size = n)) +
-  theme_classic() +
-  geom_line(data = a1_a2_year, mapping = aes(x = xlim, y = y)) +
-  facet_wrap(~ year)
+tar_load(plot_fake_data_a1_a2)
+plot_fake_data_a1_a2
 
 ```
 
@@ -1069,7 +1008,12 @@ a1_a2_fixed_mod_mcmc_a1_a2_fixed$draws(variables = c("prob_detect", "log_a1", "l
   flextable::flextable()
 ```
 
+At this point, we have a problem as the algorithm seems not able to distinguish the two $a$ parameter.
+
 ```{r}
+#| echo: false
+tar_load(fake_data_a1_a2)
+
 a1_a2_fixed_mod_mcmc_a1_a2_fixed |> 
   tidybayes::gather_rvars(mu_line[i]) |> 
   dplyr::bind_cols(as.data.frame(fake_data_a1_a2[c("newdate", "newyear")])) |> 
@@ -1079,129 +1023,79 @@ a1_a2_fixed_mod_mcmc_a1_a2_fixed |>
   facet_wrap(~ newyear)
 ```
 
-## Logit detour for log_a2
 
-```{r}
-#| echo: false
-#| error: false
+## Logis detour
 
-tar_load(fake_data_logit_a)
+To deal with the issue of 'misindentification' of the $a$ parameter, we modify the model. We keep only one $a$ parameter for both slopes. However, we add an other parameter $f$ that's gonna modify the value of both slope. The spring slope will thus be $a*f$. As we expect that the slope of fall to be lower, we multiply it by $(1-f)$. We set the prior of $f$ so that it is between 0.5 and 1 (which will cause a lower slope in fall). However, with it sd, we allow it to be under 0.5 (which would indicate a higher slope in spring). At a value of exactly 0.5, both slopes are equal (the curvature is symmetric).
 
-a1_logit_year <- data.frame(year = unique(fake_data_logit_a$year),
-                         a1 = fake_data_logit_a$.join_data$log_a1,
-                         logit_f = fake_data_logit_a$.join_data$logit_f,
-                         b1 = fake_data_logit_a$.join_data$b1,
-                         b2 = fake_data_logit_a$.join_data$b2,
-                         xlim = rep(seq(130, 240, by = 1), each = length(unique(fake_data_logit_a$year))))
+Further, to deal with scale, we estimate the $a$ and $f$ parameters on the log and absolute scale. 
 
-
-a1_logit_year$y <-  with(a1_logit_year, 1 / (1 + exp(-exp(a1) * (xlim - b1))) * 1 / (1 + exp(exp(a1 + plogis(logit_f, log.p = TRUE)) * (xlim - b2))))
-
-fake_data_logit_a |> 
-  as.data.frame() |> 
-  group_by(y, year, jj_date) |> 
-  count() |> 
-  ggplot(aes(x = jj_date, y = y)) +
-  geom_point(alpha = 0.2, aes(size = n)) +
-  theme_classic() +
-  geom_line(data = a1_logit_year, mapping = aes(x = xlim, y = y)) +
-  facet_wrap(~ year)
-
-```
-
-
-```{r}
-tar_load(logit_a1_mcmc_a1_logit)
-
-logit_a1_mcmc_a1_logit$draws(variables = c("prob_detect", "log_a1", "logit_f", "b1", "b2")) |> 
-  posterior::summarise_draws() |> 
-  flextable::flextable()
-```
-
-```{r}
-logit_a1_mcmc_a1_logit |> 
-  tidybayes::gather_rvars(mu_line[i]) |> 
-  dplyr::bind_cols(as.data.frame(fake_data_a1_a2[c("newdate", "newyear")])) |> 
-  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
-  tidybayes::stat_lineribbon() +
-  theme_classic() +
-  facet_wrap(~ newyear)
-```
-
-## Logis detour in the stan code
-
-```{r}
-#| echo: false
-#| error: false
-
-tar_load(fake_data_logis)
-
-logis_year <- data.frame(year = unique(fake_data_logis$year),
-                         a = fake_data_logis$.join_data$a,
-                         logis_f = fake_data_logis$.join_data$logis_f,
-                         b1 = fake_data_logis$.join_data$b1,
-                         b2 = fake_data_logis$.join_data$b2,
-                         xlim = rep(seq(130, 240, by = 1), each = length(unique(fake_data_logis$year))))
-
-
-logis_year$y <-  with(logis_year, plogis(a*logis_f * (xlim - b1)) * plogis(-a*(1-logis_f) * (xlim - b2)))
-
-fake_data_logis |> 
-  as.data.frame() |> 
-  group_by(y, year, jj_date) |> 
-  count() |> 
-  ggplot(aes(x = jj_date, y = y)) +
-  geom_point(alpha = 0.2, aes(size = n)) +
-  theme_classic() +
-  geom_line(data = logis_year, mapping = aes(x = xlim, y = y)) +
-  facet_wrap(~ year)
-
-```
-
-## All parameters
-
-As for before, we start to generate fake data. For each year, we will make the following parameters vary : $log_a1$, $log_a2$, $b1$ and $b2$. The only parameter that we keep constant is the probability of detection, as we assume that it should no vary, for one species, between years. 
-
-```{r}
-#| echo: false
-
-tar_load(fake_data_additive)
-str(fake_data_additive)
-```
-
-
-
-```{r}
-#| echo: false
-#| error: false
-
-b1_year <- data.frame(year = unique(fake_data_additive$year),
-                      b1 = fake_data_additive$.join_data$b1)
-
-b2_year <- data.frame(year = unique(fake_data_additive$year),
-                      b2 = fake_data_additive$.join_data$b2)
-
-fake_data_additive |> 
-  as.data.frame() |> 
-  group_by(y, year, jj_date) |> 
-  count() |> 
-  ggplot(aes(x = jj_date, y = y)) +
-  geom_point(alpha = 0.2, aes(size = n)) +
-  theme_classic() +
-  geom_vline(data = b1_year, mapping = aes(xintercept = b1)) +
-  geom_vline(data = b2_year, mapping = aes(xintercept = b2)) +
-  facet_wrap(~ year)
-
-```
+The modified stan code looks like : 
 
 ```{r}
 #| class-output: stan
 #| echo: false
 #| error: false
 
-all_fixed_stan <- cmdstanr::cmdstan_model(stan_file = "all_fixed.stan")
+a_logis_stan <- cmdstanr::cmdstan_model(stan_file = "a_logis.stan")
 
-all_fixed_stan
+a_logis_stan
+```
+
+For this simulation, we will vary both parameter $a$ and $f$ each year. This means that the slopes should be different for each year and their relation (symmetry) should also differs.
+
+```{r}
+#| echo: false
+#| error: false
+
+tar_load(plot_fake_data_logis)
+plot_fake_data_logis
+
+```
+
+We than run this model and check the distribution of the estimated parameters. They look just fine !!
+
+```{r}
+#| echo: false
+tar_load(logis_a_mcmc_a_logis)
+
+logis_a_mcmc_a_logis$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+```
+
+The prediction of our curve is also very good. We are gonna keep this approach for the 'complete' model, where all the parameters (so $b1$ and $b2$) vary with year. 
+
+```{r}
+#| echo: false
+tar_load(fake_data_logis)
+
+logis_a_mcmc_a_logis |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_logis[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+## All parameters
+
+As for before, we start to generate fake data. For each year, we will make the following parameters vary : $a$, $f$, $b1$ and $b2$. The only parameter that we keep constant is the probability of detection, as we assume that it should no vary, for one species, between years. 
+
+```{r}
+#| echo: false
+
+tar_load(fake_data_all)
+str(fake_data_all)
+```
+
+```{r}
+#| echo: false
+#| error: false
+tar_load(plot_fake_data_all)
+plot_fake_data_all
+
 ```
 
 ```{r}
@@ -1209,15 +1103,50 @@ all_fixed_stan
 
 tar_load(all_fixed_mod_mcmc_all_fixed)
 
-all_fixed_mod_mcmc_all_fixed$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2")) |> 
+all_fixed_mod_mcmc_all_fixed$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2")) |> 
   posterior::summarise_draws() |> 
   flextable::flextable()
 ```
 
 ```{r}
+#| echo: false
+tar_load(fake_data_all)
+
 all_fixed_mod_mcmc_all_fixed |> 
   tidybayes::gather_rvars(mu_line[i]) |> 
-  dplyr::bind_cols(as.data.frame(fake_data_additive[c("newdate", "newyear")])) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_all[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+# Testing the ~Year model with data
+
+We will apply our model to the long-tailed duck data. Estimating parameters for each years.
+
+```{r}
+#| echo: false
+#| column: screen-inset
+tar_load(duck_all_mod_mcmc_all_fixed)
+
+duck_all_mod_mcmc_all_fixed$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+```
+
+```{r}
+#| echo: false
+#| column: screen-inset
+#| fig-align: center
+#| fig-width: 10
+#| fig-height: 10
+
+tar_load(duck_data_all)
+
+duck_all_mod_mcmc_all_fixed |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(duck_data_all[c("newdate", "newyear")])) |> 
   ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
   tidybayes::stat_lineribbon() +
   theme_classic() +
@@ -1232,9 +1161,9 @@ all_fixed_mod_mcmc_all_fixed |>
 - [x] Build the 1:1 graph for the mean of the posterior vs real parameters
 - [X] Run a model for the Long-tailed Duck data all year combined
 - [X] Illustrate the model like in [this article](https://mc-stan.org/bayesplot/articles/plotting-mcmc-draws.html)
-- [ ] Adjust the model for a logit form
+- [X] Adjust the model for a logit form
 - [x] Simulate and run an additive model in Stan
-- [ ] Simulate and run a model with all the relevant parameter varying with year
-- [ ] Run a model for the Long-tailed Duck with parameter varying each year
+- [X] Simulate and run a model with all the relevant parameter varying with year
+- [X] Run a model for the Long-tailed Duck with parameter varying each year
 - [ ] Simulate data with a hierarchical structure for one parameters (ex: b1)
 - [ ] Run a hierarchical model for one parameters

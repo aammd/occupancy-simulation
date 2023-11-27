@@ -189,6 +189,12 @@ list(
       )
   ),
   
+  # Plot the simulated data
+  tar_target(
+    plot_fake_data_b1,
+    plot_fake(fake_data_b1)
+  ),
+  
   # Run a Stan model for the fake data with B1 varying in each year
   tar_stan_mcmc(
     b1_fixed_mod,
@@ -196,7 +202,7 @@ list(
     data = fake_data_b1,
     parallel_chains = 4
   ),
-  
+
   
   # Simulate data with varying B1 & B2 value each year
   tar_target(
@@ -210,6 +216,14 @@ list(
       n_new = 100
     )
   ),
+  
+  
+  # Plot the simulated data
+  tar_target(
+    plot_fake_data_b1_b2,
+    plot_fake(fake_data_b1_b2)
+  ),
+  
   
   # Run a Stan model for the fake data with B1 & B2 varying in each year
   tar_stan_mcmc(
@@ -234,6 +248,12 @@ list(
     )
   ),
   
+  # Plot the simulated data
+  tar_target(
+    plot_fake_data_a1,
+    plot_fake(fake_data_a1)
+  ),
+  
   # Run a Stan model for the fake data with a1 varying in each year
   tar_stan_mcmc(
     a1_fixed_mod,
@@ -256,6 +276,12 @@ list(
     )
   ),
   
+  # Plot the simulated data
+  tar_target(
+    plot_fake_data_a1_a2,
+    plot_fake(fake_data_a1_a2)
+  ),
+  
   # Run a Stan model for the fake data with a1 & a2 varying in each year
   tar_stan_mcmc(
     a1_a2_fixed_mod,
@@ -264,30 +290,7 @@ list(
     parallel_chains = 4
   ),
   
-  
-  # Simulate logit data
-  tar_target(
-    fake_data_logit_a,
-    simulate_a_logit(
-      b1 = 150,
-      b2 = 220,
-      n.year = 6,
-      prob_detect = 0.3,
-      nsample = 200,
-      n_new = 100
-    )
-  ),
-  
-  # Run a Stan model for our logit of a2 detour
-  tar_stan_mcmc(
-    logit_a1,
-    stan_files = "a1_logit.stan",
-    data = fake_data_logit_a,
-    parallel_chains = 4
-  ),
-  
-  
-  # Second detour with a logis HOF function
+  # Detour with a logit HOF function
   # Generate the data
   tar_target(
     fake_data_logis,
@@ -301,6 +304,13 @@ list(
       )
   ),
   
+  
+  # Plot the simulated data
+  tar_target(
+    plot_fake_data_logis,
+    plot_fake_logit(fake_data_logis)
+  ),
+  
   # Run a Stan model for our logis of a detour
   tar_stan_mcmc(
     logis_a,
@@ -312,7 +322,7 @@ list(
   
   # Simulate data with varying parameter value each year
   tar_target(
-    fake_data_additive,
+    fake_data_all,
     simulate_add_all(
       n.year = 6,
       prob_detect = 0.3,
@@ -321,15 +331,34 @@ list(
     )
   ),
   
+  
+  # Plot the simulated data
+  tar_target(
+    plot_fake_data_all,
+    plot_fake_logit(fake_data_all)
+  ),
+  
   # Run a Stan model for the fake data with all parameters varying in each year
   tar_stan_mcmc(
     all_fixed_mod,
     stan_files = "all_fixed.stan",
-    data = fake_data_additive,
+    data = fake_data_all,
     parallel_chains = 4
   ),
   
   
+  # Load duck data in format for model all ~ year
+  tar_target(
+    duck_data_all,
+    load_duck_all(data = obs_data, n_new = 40)
+  ),
+  
+  tar_stan_mcmc(
+    duck_all_mod,
+    stan_files = "all_fixed.stan",
+    data = duck_data_all,
+    parallel_chains = 4
+  ),
   
   # tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
   #   fixed_eff_time_log,

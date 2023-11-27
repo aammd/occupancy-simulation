@@ -312,6 +312,106 @@ stan_duck <- function(data) {
 } 
 
 
+# Function to plot the fake data
+plot_fake <- function(fake_data){
+  
+  n.year <- length(unique(fake_data$year))
+  
+  if (length(fake_data$.join_data$log_a1) != n.year) {
+    log_a1 <- rep(fake_data$.join_data$log_a1, n.year)
+  } else {
+    log_a1 <- fake_data$.join_data$log_a1
+  }
+  
+  if (length(fake_data$.join_data$log_a2) != n.year) {
+    log_a2 <- rep(fake_data$.join_data$log_a2, n.year)
+  } else {
+    log_a2 <- fake_data$.join_data$log_a2
+  }
+  
+  if (length(fake_data$.join_data$b1) != n.year) {
+    b1 <- rep(fake_data$.join_data$b1, n.year)
+  } else {
+    b1 <- fake_data$.join_data$b1
+  }
+  
+  if (length(fake_data$.join_data$b2) != n.year) {
+    b2 <- rep(fake_data$.join_data$b2, n.year)
+  } else {
+    b2 <- fake_data$.join_data$b2
+  }
+  
+  fake_year <- data.frame(year = unique(fake_data$year),
+                           a1 = log_a1,
+                           a2 = log_a2,
+                           b1 = b1,
+                           b2 = b2,
+                           xlim = rep(seq(130, 240, by = 1), each = n.year))
+  
+  
+  fake_year$y <-  with(fake_year,  1 / (1 + exp(-exp(a1) * (xlim - b1))) * 1 / (1 + exp(exp(a2) * (xlim - b2))))
+  
+  fake_data |> 
+    as.data.frame() |> 
+    group_by(y, year, jj_date) |> 
+    count() |> 
+    ggplot(aes(x = jj_date, y = y)) +
+    geom_point(alpha = 0.2, aes(size = n)) +
+    theme_classic() +
+    geom_line(data = fake_year, mapping = aes(x = xlim, y = y)) +
+    facet_wrap(~ year)
+}
+
+
+# Function to plot the fake data with logit detour
+plot_fake_logit <- function(fake_data){
+  
+  n.year <- length(unique(fake_data$year))
+  
+  if (length(fake_data$.join_data$a) != n.year) {
+    a <- rep(fake_data$.join_data$a, n.year)
+  } else {
+    a <- fake_data$.join_data$a
+  }
+  
+  if (length(fake_data$.join_data$f) != n.year) {
+    f <- rep(fake_data$.join_data$f, n.year)
+  } else {
+    f <- fake_data$.join_data$f
+  }
+  
+  if (length(fake_data$.join_data$b1) != n.year) {
+    b1 <- rep(fake_data$.join_data$b1, n.year)
+  } else {
+    b1 <- fake_data$.join_data$b1
+  }
+  
+  if (length(fake_data$.join_data$b2) != n.year) {
+    b2 <- rep(fake_data$.join_data$b2, n.year)
+  } else {
+    b2 <- fake_data$.join_data$b2
+  }
+  
+  fake_year <- data.frame(year = unique(fake_data$year),
+                          a = a,
+                          f = f,
+                          b1 = b1,
+                          b2 = b2,
+                          xlim = rep(seq(130, 240, by = 1), each = n.year))
+  
+  
+  fake_year$y <-  with(fake_year, plogis(exp(a)*plogis(f) * (xlim - b1)) * plogis(-exp(a)*(1-plogis(f)) * (xlim - b2)))
+  
+  fake_data |> 
+    as.data.frame() |> 
+    group_by(y, year, jj_date) |> 
+    count() |> 
+    ggplot(aes(x = jj_date, y = y)) +
+    geom_point(alpha = 0.2, aes(size = n)) +
+    theme_classic() +
+    geom_line(data = fake_year, mapping = aes(x = xlim, y = y)) +
+    facet_wrap(~ year)
+}
 
 
 # Function to simulate data with :
@@ -684,11 +784,11 @@ prob_pres_HOF_logis <-
     plogis(a*logis_f * (jj_date - b1)) * plogis(-a*(1-logis_f) * (jj_date - b2))
 }
 
-# LOGIT
+# LOGIT detour with f fraction to influence the a parameter
 # Function to simulate data with :
 # Presence ~ Date
-# log_a1 ~ Year
-# log_a2 ~ Year
+# a ~ Year
+# f ~ Year
 # Detection ~ Effort
 # Fixed parameters values
 simulate_logis <-
@@ -697,9 +797,11 @@ simulate_logis <-
     df_sim <- tibble()
     
     # Draw a new log_a1 for each year
-    a <- rnorm(n.year, 0.5, 0.1)
+    a <- rnorm(n.year, 0, 1)
+    exp_a <- exp(a)
     # Draw a fraction added/subtracted to a
-    logis_f <- plogis(rnorm(n.year, 0.9, 0.2))
+    f <- rnorm(n.year, 1, 1)
+    logis_f <- plogis(f)
     
     for (i in 1:n.year) {
       
@@ -711,7 +813,7 @@ simulate_logis <-
           min = 130,
           max = 240
         )),
-        real_pres = prob_pres_HOF_logis(a = a[i],
+        real_pres = prob_pres_HOF_logis(a = exp_a[i],
                                         logis_f = logis_f[i],
                                         b1 = b1,
                                         b2 = b2,
@@ -750,7 +852,7 @@ simulate_logis <-
       .join_data = list(
         prob_detect = prob_detect,
         a = a,
-        logis_f = logis_f,
+        f = f,
         b1 = b1,
         b2 = b2
       )
@@ -776,11 +878,12 @@ simulate_add_all <-
     # Draw a new b1 for each year
     b2 <- floor(runif(n.year, 190, 210))
     
-    # Draw a new b1 for each year
-    log_a1 <- rnorm(n.year, -1.5, 1)
-    
-    # Draw a new b1 for each year
-    log_a2 <- rnorm(n.year,-1.5, 1)
+    # Draw a new log_a1 for each year
+    a <- rnorm(n.year, 0, 1)
+    exp_a <- exp(a)
+    # Draw a fraction added/subtracted to a
+    f <- rnorm(n.year, 1, 1)
+    logis_f <- plogis(f)
     
     for (i in 1:n.year) {
       
@@ -792,11 +895,11 @@ simulate_add_all <-
           min = 130,
           max = 240
         )),
-        real_pres = prob_pres_HOF(exp(log_a1[i]),
-                                  exp(log_a2[i]),
-                                  b1[i],
-                                  b2[i],
-                                  jj_date),
+        real_pres = prob_pres_HOF_logis(a = exp_a[i],
+                                        logis_f = logis_f[i],
+                                        b1 = b1[i],
+                                        b2 = b2[i],
+                                        jj_date = jj_date),
         effort = round(runif(
           n = nsample,
           min = 1, max = 25
@@ -830,10 +933,63 @@ simulate_add_all <-
       newyear = newdat$newyear,
       .join_data = list(
         prob_detect = prob_detect,
-        log_a1 = log_a1,
-        log_a2 = log_a2,
+        a = a,
+        f = f,
         b1 = b1,
         b2 = b2
       )
     )
   }
+
+
+
+
+# Format the duck data for the model with all ~ year
+load_duck_all <- function(data, n_new = 20) {
+  data <- data[[1]] |>
+    group_by(Year,
+             Date,
+             Observed_sp,
+             groupID,
+             Nb_observers,
+             Nb_field_hours) |>
+    dplyr::select(Year,
+                  Date,
+                  Observed_sp,
+                  Nb_ind,
+                  groupID,
+                  Nb_observers,
+                  Nb_field_hours) |>
+    summarise(Nb_ind = mean(Nb_ind)) |>
+    tidyr::pivot_wider(
+      names_from = Observed_sp,
+      values_from = Nb_ind,
+      values_fill = 0
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::select(Year, Date, 'Long-tailed Duck', Nb_observers, Nb_field_hours) |>
+    rename("ltdu" = 'Long-tailed Duck') |>
+    tidyr::drop_na() |>
+    filter(Nb_field_hours > 0 & Nb_observers > 0) |>
+    mutate(obs = ifelse(ltdu >= 1, yes = 1, no = 0)) |>
+    mutate(Date = as.numeric(Date))
+  
+  n.year <- unique(data$Year)
+  
+  ## make a fake data-frame for predicting
+  newdat <- expand.grid(
+    newdate = seq(from = 120, to = 250, length.out = n_new),
+    newyear = 1:length(n.year))
+  
+  list(
+    N = nrow(data),
+    N_Y = length(n.year),
+    y = data$obs,
+    year = as.factor(data$Year),
+    effort = data$Nb_field_hours,
+    jj_date = data$Date,
+    n_new = n_new,
+    newdate = newdat$newdate,
+    newyear = newdat$newyear
+  )
+}

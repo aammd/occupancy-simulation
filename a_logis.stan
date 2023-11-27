@@ -15,8 +15,8 @@ data {
 parameters {
   real<lower=0, upper=1> prob_detect;
   
-  vector[N_Y] a; // Value of a
-  vector[N_Y] logis_f; // Link with slope of a
+  vector[N_Y] log_a; // Value of a
+  vector[N_Y] f; // Link with slope of a
   real<lower=1, upper=365> b1;
   real<lower=1, upper=365> b2;
   
@@ -25,15 +25,25 @@ parameters {
 // The model to be estimated. We model the output
 // 'y' to be normally distributed with mean 'mu'
 // and standard deviation 'sigma'.
+
+transformed parameters{
+  vector[N_Y] f_prob = inv_logit(f);
+  vector[N_Y] a_abs = exp(log_a);
+}
+
 model {
   prob_detect ~ beta(2, 5);
-//  log_a1 ~ normal(-1, 1);
-//  logit_f ~ plogis(normal(1.5, 0.5));
+  log_a ~  normal(-1, 0.8);
+  f ~  normal(1, 0.5);
   b1 ~ normal(150, 7);
   b2 ~ normal(210, 7);
   
-//  y ~ bernoulli((1 - (1 - prob_detect)^effort) .* (1 / (1 + exp(-exp(log_a1[year]) .* (jj_date - b1))) .* (1 / (1 + exp(exp(log_a1[year] + log_inv_logit(logit_f[year]))  .* (jj_date - b2))))));
+  
+  y ~ bernoulli((1 - (1 - prob_detect)^effort) .* 
+                inv_logit(-a_abs[year] .* f_prob[year] .* (jj_date - b1)) .*
+                inv_logit(a_abs[year] .* (1 - f_prob[year]) .* (jj_date - b2)));
 }
 generated quantities {
-//  vector[n_new*N_Y] mu_line = (1 / (1 + exp(-exp(log_a1[newyear]) .* (newdate - b1)))) .* (1 / (1 + exp(exp(log_a1[newyear] + log_inv_logit(logit_f[newyear])) .* (newdate - b2))));
+  vector[n_new*N_Y] mu_line = inv_logit(-a_abs[newyear] .* f_prob[newyear] .* (newdate - b1)) .*
+                inv_logit(a_abs[newyear] .* (1 - f_prob[newyear]) .* (newdate - b2));
 }
