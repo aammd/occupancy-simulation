@@ -864,7 +864,7 @@ simulate_logis <-
 # Function to simulate data with :
 # Presence ~ Date
 # b1 & b2 ~ Year
-# log_a1 & log_a2 ~ Year
+# log_a & f ~ Year
 # Detection ~ Effort
 # Fixed parameters values
 simulate_add_all <-
@@ -993,3 +993,103 @@ load_duck_all <- function(data, n_new = 20) {
     newyear = newdat$newyear
   )
 }
+
+
+
+# Function to simulate hierarchical data with :
+# Presence ~ Date
+# b1 & b2 ~ Year
+# log_a & f ~ Year
+# Detection ~ Effort
+simulate_hierarchical <-
+  function(n.year, prob_detect, 
+           b1.mu = 150, b1.sigma = 2,
+           b2.mu = 200, b2.sigma = 2, 
+           a.mu  = -1,    a.sigma = 0.5,
+           f.mu  = 1,    f.sigma = 0.5, nsample = 200, n_new = 20) {
+    
+    df_sim <- tibble()
+    
+    # Draw a new b1 for each year
+    ## Each value is nested in a normal distribution with mean of b1.mu and variance of b1.sigma
+    b1 <- floor(rnorm(n.year, mean = b1.mu, sd = b1.sigma))
+    
+    # Draw a new b1 for each year
+    ## Each value is nested in a normal distribution with mean of b2.mu and variance of b2.sigma
+    b2 <- floor(rnorm(n.year, mean = b2.mu, sd = b2.sigma))
+    
+    # Draw a new log_a1 for each year
+    # Draw value in normal distribution with mean of a.mu and variance of a.sigma
+    a <- rnorm(n.year, a.mu, a.sigma)
+    exp_a <- exp(a)
+    
+    # Draw a fraction added/subtracted to a (slope)
+    # Draw value in normal distribution with mean of f.mu and variance of f.sigma
+    f <- rnorm(n.year, f.mu, f.sigma)
+    logis_f <- plogis(f)
+    
+    # Create the fake data for each year
+    for (i in 1:n.year) {
+      
+      df_year <- tibble(
+        sample_id = 1:nsample,
+        year = 2009 + i,
+        jj_date = floor(runif(
+          n = nsample,
+          min = 130,
+          max = 240
+        )),
+        real_pres = prob_pres_HOF_logis(a = exp_a[i],
+                                        logis_f = logis_f[i],
+                                        b1 = b1[i],
+                                        b2 = b2[i],
+                                        jj_date = jj_date),
+        effort = round(runif(
+          n = nsample,
+          min = 1, max = 25
+        ))
+      ) |>
+        rowwise() |>
+        mutate(
+          pa = 1 - (1 - prob_detect) ^ effort,
+          y = rbinom(n = 1, p = pa, size = 1) * rbinom(n = 1, p = real_pres, size = 1)
+        )
+      
+      df_sim <- rbind(df_sim, df_year)
+    }
+    
+    ## make a fake data-frame for predicting
+    newdat <- expand.grid(
+      newdate = seq(from = 120, to = 250, length.out = n_new),
+      newyear = 1:n.year)
+    
+    # Return fake data set in list
+    list(
+      N = nsample*n.year,
+      N_Y = n.year,
+      y = df_sim$y,
+      year = as.factor(df_sim$year),
+      jj_date = df_sim$jj_date,
+      effort = df_sim$effort,
+      n_new = n_new,
+      newdate = newdat$newdate,
+      newyear = newdat$newyear,
+      .join_data = list(
+        prob_detect = prob_detect,
+        a = a,
+        f = f,
+        b1 = b1,
+        b2 = b2,
+        hyperparameters = list(
+          a.mu = a.mu,
+          a.sigma = a.sigma,
+          f.mu = f.mu,
+          f.sigma = f.sigma,
+          b1.mu = b1.mu,
+          b1.sigma = b1.sigma,
+          b2.mu = b2.mu,
+          b2.sigma = b2.sigma
+        )
+      )
+    )
+  }

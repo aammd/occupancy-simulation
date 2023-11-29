@@ -360,23 +360,31 @@ list(
     parallel_chains = 4
   ),
   
-  # tar_stan_mcmc_rep_summary( # Run models on multiple data sets with fixed parameter values, but presence fct of time
-  #   fixed_eff_time_log,
-  #   stan_files = "occ_eff_time_log.stan",
-  #   batches = 1,
-  #   reps = 4,
-  #   data = simulate_occ_eff_time_logscale(nsample = 200),
-  #   variables = c("logit_prob_detect", "log_a1", "log_a2", "b1", "b2"),
-  #   summaries = list(
-  #     ~posterior::quantile2(.x, probs = c(0.025, 0.975))
-  #   ),
-  #   quiet = TRUE,
-  #   refresh = 0L
-  # ),
-  # tar_target(
-  #   cov_fixed_eff_time_log,
-  #   command = calc_coverage(fixed_eff_time_log)
-  # )
+  # Create a fake data set with hierarchical para
+  tar_target(
+    fake_data_hierarchical,
+    simulate_hierarchical(
+      n.year = 9,
+      prob_detect = 0.3,
+      b1.mu = 150, b1.sigma = 2.5,
+      b2.mu = 200, b2.sigma = 2.5, 
+      a.mu  = -1,    a.sigma = 0.5,
+      f.mu  = 1,    f.sigma = 0.5,
+      nsample = 200,
+      n_new = 100
+    )
+  ),
+  
+  
+  # Plot the simulated hierarchical data
+  tar_target(
+    plot_fake_data_hierarchical,
+    plot_fake_logit(fake_data_hierarchical)
+  ),
+  
+  
+  # Last target :
+  # Compile the Quarto report
   tar_quarto(report, "occupancy_STAN.qmd")
 )
 

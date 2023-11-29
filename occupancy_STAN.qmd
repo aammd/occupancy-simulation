@@ -1024,11 +1024,28 @@ a1_a2_fixed_mod_mcmc_a1_a2_fixed |>
 ```
 
 
-## Logis detour
+## Logit detour
 
 To deal with the issue of 'misindentification' of the $a$ parameter, we modify the model. We keep only one $a$ parameter for both slopes. However, we add an other parameter $f$ that's gonna modify the value of both slope. The spring slope will thus be $a*f$. As we expect that the slope of fall to be lower, we multiply it by $(1-f)$. We set the prior of $f$ so that it is between 0.5 and 1 (which will cause a lower slope in fall). However, with it sd, we allow it to be under 0.5 (which would indicate a higher slope in spring). At a value of exactly 0.5, both slopes are equal (the curvature is symmetric).
 
-Further, to deal with scale, we estimate the $a$ and $f$ parameters on the log and absolute scale. 
+Further, to deal with scale, we estimate the $a$ and $f$ parameters on the log and absolute scale. This is what the equation system now look like with the logit detour :
+
+$$
+\begin{align}
+Pr(y = 1) &= Bernoulli(w * p) \\\\
+
+w &= 1 - (1 - d)^{effort} \\
+p &= \dfrac{e^{-a f (date - b_1)}}{1 + e^{-a f (date - b_1)}} * \dfrac{e^{a (1 - f) (date - b_2)}}{1+e^{a (1 - f) (date - b_2)}}\\\\ 
+
+a &= exp(\alpha) \\
+f &= \dfrac{e^{\phi}}{1 + e^{\phi}} \\\\
+
+\alpha &\sim \text{Normal} \\
+\phi &\sim \text{Normal}\\
+b_1 &\sim \text{Normal}\\
+b_2 &\sim \text{Normal}\\
+\end{align}
+$$
 
 The modified stan code looks like : 
 
@@ -1082,6 +1099,23 @@ logis_a_mcmc_a_logis |>
 ## All parameters
 
 As for before, we start to generate fake data. For each year, we will make the following parameters vary : $a$, $f$, $b1$ and $b2$. The only parameter that we keep constant is the probability of detection, as we assume that it should no vary, for one species, between years. 
+With parameters varying each year, we modify the equation so that it matches for year $i$
+$$
+\begin{align}
+Pr(y = 1) &= Bernoulli(w * p) \\\\
+
+w &= 1 - (1 - d)^{effort} \\
+p &= \dfrac{e^{-a^i f^i (date - b_1^i)}}{1 + e^{-a^i f^i (date - b_1^i)}} * \dfrac{e^{a^i (1 - f^i) (date - b_2^i)}}{1+e^{a^i (1 - f^i) (date - b_2^i)}}\\\\ 
+
+a^i &= exp(\alpha^i) \\
+f^i &= \dfrac{e^{\phi^i}}{1 + e^{\phi^i}} \\\\
+
+\alpha^i &\sim \text{Normal} \\
+\phi^i &\sim \text{Normal}\\
+b_1^i &\sim \text{Normal}\\
+b_2^i &\sim \text{Normal}\\
+\end{align}
+$$
 
 ```{r}
 #| echo: false
@@ -1123,6 +1157,29 @@ all_fixed_mod_mcmc_all_fixed |>
 
 # Testing the ~Year model with data
 
+## Vizualising the data
+```{r}
+#| echo: false
+#| column: screen-inset
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 8
+
+tar_load(duck_data_all)
+
+duck_data_all[c(3, 4, 6)] |> 
+  as.data.frame() |> 
+  group_by(y, year, jj_date) |> 
+  count() |> 
+  ggplot(aes(x = jj_date, y = y)) +
+  geom_point(alpha = 0.2, aes(size = n)) +
+  theme_classic() +
+  facet_wrap(~ year)
+
+```
+
+## Run the model
+
 We will apply our model to the long-tailed duck data. Estimating parameters for each years.
 
 ```{r}
@@ -1151,6 +1208,125 @@ duck_all_mod_mcmc_all_fixed |>
   tidybayes::stat_lineribbon() +
   theme_classic() +
   facet_wrap(~ newyear)
+```
+
+## Explore the results
+
+Plot the arrival and departure date
+
+```{r}
+#| echo: false
+
+duck.year <- duck_all_mod_mcmc_all_fixed$draws(variables = c("b1", "b2"))  |> 
+  posterior::summarise_draws() |> 
+  select(variable, mean, q5, q95) |> 
+  mutate(Year = rep(c(2007:2019, 2021, 2022), 2))
+
+
+duck.segment <- cbind(duck.year[16:30, c(5, 2)], duck.year[1:15, 2])
+names(duck.segment) <- c("Year", "B1", "B2")
+duck.segment <- duck.segment |> 
+  mutate(duration = B2 - B1) |> 
+  filter(duration > 0)
+
+ggplot(duck.year, aes(x = Year, y = mean, colour = factor(Year))) +
+  geom_segment(data = duck.segment, mapping = aes(x = Year, xend = Year, y = B1, yend = B2), color="grey", linetype = "dashed") +
+  geom_point(size = 3.5, show.legend = FALSE) +
+  geom_errorbar(aes(ymin = q5, ymax = q95), width = 0.5, linewidth = 1, show.legend = FALSE) +
+  viridis::scale_color_viridis(discrete = TRUE) + 
+  coord_flip() + theme_classic() 
+
+```
+
+Histogram of length of stay 
+
+```{r}
+#| echo: false
+
+ggplot(duck.segment, aes(x = Year, y = duration)) +
+  geom_line(linewidth = 0.8, colour = "grey", linetype = "dashed") +
+  geom_point(size = 3.5, aes(colour = factor(Year)), show.legend = FALSE) + 
+  viridis::scale_color_viridis(discrete = TRUE) +
+  theme_classic()
+
+```
+
+
+# Hierarchical model
+
+The next step is to consider that each parameter of the model is nested in a distribution of said parameters: a hierarchical model ! We do this because for some year, the data collection started later than for others. With no apparent trend in the arrival/departure date, we will capitalize on the information of other years to inform the years with less data. This will be particularly useful for estimating the departure date, as some species seems to leave after us (ex: geese, crane and loons). 
+
+## Hierarchical model for one parameter
+
+We start to test the structure of our Stan model with only one parameter (here $b_1$). We modify the equation so that $b_1$ is nested in a distribution with it's own mean and variance.
+
+$$
+\begin{align}
+Pr(y = 1) &= Bernoulli(w * p) \\\\
+
+w &= 1 - (1 - d)^{effort} \\
+p &= \dfrac{e^{-a^i f^i (date - b_1^i)}}{1 + e^{-a^i f^i (date - b_1^i)}} * \dfrac{e^{a^i (1 - f^i) (date - b_2^i)}}{1+e^{a^i (1 - f^i) (date - b_2^i)}}\\\\ 
+
+a^i &= exp(\alpha^i) \\
+f^i &= \dfrac{e^{\phi^i}}{1 + e^{\phi^i}} \\\\
+
+\alpha^i &\sim \text{Normal} \\
+\phi^i &\sim \text{Normal}\\
+b_1^i &\sim \text{Normal}\\
+b_2^i &\sim \text{Normal}\\
+\end{align}
+$$
+
+### Create a false data set
+
+We create the same false data set, but this time we constrain $b1$ in a distribution. We will use a normal distribution centered on 150 with a sd of 2.5 (which approximately means a range of 1 week).
+
+For computational simplicity, we sampled all the parameters (except probability of detection) in a normal distribution with given mean and variance. Thus, we will use the same hierarchical fake data set for all model test.
+
+```{r}
+#| echo: false
+#| column: page
+#| fig-align: center
+
+tar_load(plot_fake_data_hierarchical)
+
+plot_fake_data_hierarchical
+
+```
+
+Her is the pdf of all the parameters
+
+```{r}
+#| echo: false
+#| layout-nrow: 2
+#| column: page
+
+tar_load(fake_data_hierarchical)
+
+x1 <- seq(-3, 1, length.out = 100)
+x2 <- seq(-1, 3, length.out = 100)
+x3 <- seq(140, 160, length.out = 100)
+x4 <- seq(190, 210, length.out = 100)
+
+plot(x1, dnorm(x1, mean = fake_data_hierarchical$.join_data$hyperparameters$a.mu, 
+                  sd = fake_data_hierarchical$.join_data$hyperparameters$a.sigma), type = "l", xlab = "", yaxt="n", ylab="", lwd = 2, main = "a")
+abline(v = fake_data_hierarchical$.join_data$a, col = viridis::viridis(5)[1], lwd = 2)
+
+
+plot(x2, dnorm(x2, mean = fake_data_hierarchical$.join_data$hyperparameters$f.mu, 
+                  sd = fake_data_hierarchical$.join_data$hyperparameters$f.sigma), type = "l", xlab = "", yaxt="n", ylab="", lwd = 2, main = "f")
+abline(v = fake_data_hierarchical$.join_data$f, col = viridis::viridis(5)[2], lwd = 2)
+
+
+plot(x3, dnorm(x3, mean = fake_data_hierarchical$.join_data$hyperparameters$b1.mu, 
+                  sd = fake_data_hierarchical$.join_data$hyperparameters$b1.sigma), type = "l", xlab = "", yaxt="n", ylab="", lwd = 2, main = "b1")
+abline(v = fake_data_hierarchical$.join_data$b1, col = viridis::viridis(5)[3], lwd = 2)
+
+
+plot(x4, dnorm(x4, mean = fake_data_hierarchical$.join_data$hyperparameters$b2.mu, 
+                  sd = fake_data_hierarchical$.join_data$hyperparameters$b2.sigma), type = "l", xlab = "", yaxt="n", ylab="", lwd = 2, main = "b2")
+abline(v = fake_data_hierarchical$.join_data$b2, col = viridis::viridis(5)[4], lwd = 2)
+
 ```
 
 ** **TODO** **

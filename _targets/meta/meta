@@ -1,5 +1,5 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-.Random.seed|object|d3ea417325b0e83b|||||||||||||||
+.Random.seed|object|5445c333b7388ffa|||||||||||||||
 <<<<<<< HEAD|||||||||||||||||
 =======|||||||||||||||||
 >>>>>>> main|||||||||||||||||
@@ -82,6 +82,7 @@ fake_data_additive|stem|626620445e9e37c9|f0d808ccf8195e08|276a13eef2a523c0|-2036
 fake_data_all|stem|2b5c2b016c2db86d|f0d808ccf8195e08|8c4f8ee6aa9f1a55|2140527345||t19685.8336609606s|565d3e1eab9a2a8b|5324|rds|local|vector|||0.18||
 fake_data_b1|stem|67126af0d7c8ad61|ed3ed0fe59366932|25c2555bf057fd06|-1123504531||t19675.8965473737s|8949c3a0c9852429|5215|rds|local|vector|||0.17||
 fake_data_b1_b2|stem|1eb7ed6caf164891|d8dde4e9a1b1dd6f|f89e93e0498d9692|161052902||t19681.6620084408s|ffcd22c128904934|5198|rds|local|vector|||0.17||
+fake_data_hierarchical|stem|76ddeda71da53b8c|5c1e45c20ec9cdf8|68818579d2fb55aa|1723472961||t19690.8483188059s|906882e8ad1cf425|7461|rds|local|vector|||0.2||
 fake_data_logis|stem|39803ae26f10c128|6e17a4ec9e63203c|067cd926524d6030|1387157790||t19685.7201738708s|f321b683d8ade237|5248|rds|local|vector|||0.19||
 fake_data_logit_a|stem|9013abeb8fcb66d9|b275693ef75d3426|d8cbd22c38f3a1bb|1183677136||t19683.7082361767s|945e1154810006c4|5312|rds|local|vector|||0.26||
 fake_data_time|stem|4918d6934ae76706|27f606a4735d3a43|3872e1dca9c59c62|-1186308602||t19650.5547588851s|4319217378e1ad46|956|rds|local|vector|||0.04||
@@ -153,6 +154,7 @@ plot_fake_data_a1_a2|stem|d3187d431352cd15|31a635a88d97ddd3|31714214961abb6c|-13
 plot_fake_data_all|stem|a236282a61e23529|b42527dbda1a43ce|99192ee38d86426f|514399763||t19685.8373337245s|0d3ff7551d3cba2b|106355|rds|local|vector|||0.12||
 plot_fake_data_b1|stem|9569aec0a6c251e7|d01a9f17d0c720c0|1344588dce859f02|1404626427||t19685.7940123043s|1f0cf4aca0c93d8c|91254|rds|local|vector|||0.13||
 plot_fake_data_b1_b2|stem|dabf4051f78efc26|f43bab5ae10bd102|3d468e74472f1d84|-239431308||t19685.7922447418s|477bc83fde2e4fe6|95467|rds|local|vector|||0.13||
+plot_fake_data_hierarchical|stem|254cb1d668d9ce41|955580dafacf44e7|aa38d063463fee74|500311485||t19690.8460141516s|e0db0e8cfe493cfe|125411|rds|local|vector|||0.08||
 plot_fake_data_logis|stem|7b8498038a280190|54516a135f0cb869|9842cd189462bb13|-1514838323||t19685.8019981018s|bd86158799dec4cc|101807|rds|local|vector|||0.12||
 plot_fake_logit|function|6a833c62607c2649|||||||||||||||
 plot_mcmc_lineribbon|function|2d185e470b3cb084|||||||||||||||
@@ -187,6 +189,7 @@ simulate_add_all|function|5f79dd3faa036c1c|||||||||||||||
 simulate_add_b1|function|2c456bc0634ab212|||||||||||||||
 simulate_add_b1_b2|function|00432ecf12344adf|||||||||||||||
 simulate_hierarch_b1|function|a3c0383381835625|||||||||||||||
+simulate_hierarchical|function|cafe1aabee3ea1f4|||||||||||||||
 simulate_logis|function|b3051af44d9eee90|||||||||||||||
 simulate_occ_eff_params|function|fff509325ab9d127|||||||||||||||
 simulate_occ_eff_time|function|1a21192b41f7cfcb|||||||||||||||
