@@ -40,10 +40,10 @@ transformed parameters{
 }
 
 model {
-  b1_avg ~ normal(150, 7);
+  b1_avg ~ normal(150, 10);
   b1_sigma ~ cauchy(0, 7);
   
-  b2_avg ~ normal(210, 7);
+  b2_avg ~ normal(220, 10);
   b2_sigma ~ cauchy(0, 7);
   
   log_a_avg ~ normal(-1, 0.8);

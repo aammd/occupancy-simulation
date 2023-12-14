@@ -418,6 +418,21 @@ list(
   ),
   
   
+  # Load Lapland Longspur data
+  tar_target(
+    lalo_data_all,
+    command = load_lalo_all(data = obs_data)
+  ),
+  
+  
+  # Test hierarchical model with duck data
+  tar_stan_mcmc(
+    lalo_hierarchical,
+    stan_files = "all_hierarchical.stan",
+    data = lalo_data_all,
+    parallel_chains = 4
+  ),
+  
   # Last target :
   # Compile the Quarto report
   tar_quarto(report, "occupancy_STAN.qmd")

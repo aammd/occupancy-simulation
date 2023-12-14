@@ -1093,3 +1093,55 @@ simulate_hierarchical <-
       )
     )
   }
+
+
+
+# Format the duck data for the model with all ~ year
+load_lalo_all <- function(data, n_new = 20) {
+  data <- data[[1]] |>
+    group_by(Year,
+             Date,
+             Observed_sp,
+             groupID,
+             Nb_observers,
+             Nb_field_hours) |>
+    dplyr::select(Year,
+                  Date,
+                  Observed_sp,
+                  Nb_ind,
+                  groupID,
+                  Nb_observers,
+                  Nb_field_hours) |>
+    summarise(Nb_ind = mean(Nb_ind)) |>
+    tidyr::pivot_wider(
+      names_from = Observed_sp,
+      values_from = Nb_ind,
+      values_fill = 0
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::select(Year, Date, 'Lapland Longspur', Nb_observers, Nb_field_hours) |>
+    rename("lalo" = 'Lapland Longspur') |>
+    tidyr::drop_na() |>
+    filter(Nb_field_hours > 0 & Nb_observers > 0) |>
+    mutate(obs = ifelse(lalo >= 1, yes = 1, no = 0)) |>
+    mutate(Date = as.numeric(Date))
+  
+  n.year <- unique(data$Year)
+  
+  ## make a fake data-frame for predicting
+  newdat <- expand.grid(
+    newdate = seq(from = 120, to = 250, length.out = n_new),
+    newyear = 1:length(n.year))
+  
+  list(
+    N = nrow(data),
+    N_Y = length(n.year),
+    y = data$obs,
+    year = as.factor(data$Year),
+    effort = data$Nb_field_hours,
+    jj_date = data$Date,
+    n_new = n_new,
+    newdate = newdat$newdate,
+    newyear = newdat$newyear
+  )
+}

@@ -885,7 +885,7 @@ Inspect the distribution of our parameters posteriors
 #| echo: false
 
 b1_fixed_mod_mcmc_b1_fixed$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b1")) |> 
-  posterior::summarise_draws() |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
   flextable::flextable()
 ```
 
@@ -914,11 +914,15 @@ b1_fixed_mod_mcmc_b1_fixed |>
 ```
 
 
-It is not really surprizing that the model still work as we just added data and different values of $b1$ for those slices of data. We could do this for all parameters, but it will end up with the same results that we had in our previous analysis with all parameters.
+It is not really surprising that the model still work as we just added data and different values of $b1$ for those slices of data. We could do this for all parameters, but it will end up with the same results that we had in our previous analysis with all parameters.
 
 The next step is to test for all parameters.
 
 ## Two b parameter varying with year
+
+This part of the analysis work well and we are able to get back our simulated parameter values
+
+Simulate and plot the data
 
 ```{r}
 #| echo: false
@@ -929,6 +933,7 @@ plot_fake_data_b1_b2
 
 ```
 
+Run the model and inspect the posterior parameter prediction
 
 ```{r}
 #| echo: false
@@ -936,9 +941,11 @@ plot_fake_data_b1_b2
 tar_load(b1_b2_fixed_mod_mcmc_b1_b2_fixed)
 
 b1_b2_fixed_mod_mcmc_b1_b2_fixed$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2")) |> 
-  posterior::summarise_draws() |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
   flextable::flextable()
 ```
+
+Plot the regression
 
 ```{r}
 #| echo: false
@@ -955,6 +962,10 @@ b1_b2_fixed_mod_mcmc_b1_b2_fixed |>
 
 ## One $a$ parameter varying with year
 
+This simulation works also very well and the posterior predict with good accuracy our simulated parameters
+
+Visualize the simulated data
+
 ```{r}
 #| echo: false
 #| error: false
@@ -963,15 +974,19 @@ plot_fake_data_a1
 
 ```
 
+Inspect the posterior 
+
 ```{r}
 #| echo: false
 
 tar_load(a1_fixed_mod_mcmc_a1_fixed)
 
 a1_fixed_mod_mcmc_a1_fixed$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2")) |> 
-  posterior::summarise_draws() |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
   flextable::flextable()
 ```
+
+Plot the regression
 
 ```{r}
 #| echo: false
@@ -989,6 +1004,10 @@ a1_fixed_mod_mcmc_a1_fixed |>
 
 ## Two $a$ parameter varying with year
 
+Here is where things gets messy. When we make both $a$ parameters vary with years, the model gets confuse and is no longer able to produce a decent prediction. We show it here :
+
+Visualize the simulated data. Note that the slope changes each year for both $a$.
+
 ```{r}
 #| echo: false
 #| error: false
@@ -998,13 +1017,15 @@ plot_fake_data_a1_a2
 
 ```
 
+Inspect the posterior. Both the sd and rhat show us that this model is horrible. 
+
 ```{r}
 #| echo: false
 
 tar_load(a1_a2_fixed_mod_mcmc_a1_a2_fixed)
 
 a1_a2_fixed_mod_mcmc_a1_a2_fixed$draws(variables = c("prob_detect", "log_a1", "log_a2", "b1", "b2")) |> 
-  posterior::summarise_draws() |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
   flextable::flextable()
 ```
 
@@ -1031,6 +1052,7 @@ To deal with the issue of 'misindentification' of the $a$ parameter, we modify t
 Further, to deal with scale, we estimate the $a$ and $f$ parameters on the log and absolute scale. This is what the equation system now look like with the logit detour :
 
 $$
+
 \begin{align}
 Pr(y = 1) &= Bernoulli(w * p) \\\\
 
@@ -1045,6 +1067,7 @@ f &= \dfrac{e^{\phi}}{1 + e^{\phi}} \\\\
 b_1 &\sim \text{Normal}\\
 b_2 &\sim \text{Normal}\\
 \end{align}
+
 $$
 
 The modified stan code looks like : 
@@ -1077,7 +1100,7 @@ We than run this model and check the distribution of the estimated parameters. T
 tar_load(logis_a_mcmc_a_logis)
 
 logis_a_mcmc_a_logis$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2")) |> 
-  posterior::summarise_draws() |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
   flextable::flextable()
 ```
 
@@ -1118,12 +1141,16 @@ b_2^i &\sim \text{Normal}\\
 \end{align}
 $$
 
+Our new fake data set looks like this. Note the presence of only one parameter $a$ and the new parameter $f$.
+
 ```{r}
 #| echo: false
 
 tar_load(fake_data_all)
 str(fake_data_all)
 ```
+
+We plot the fake data as before. These looks just like the one when the two $a$ changed. 
 
 ```{r}
 #| echo: false
@@ -1133,15 +1160,26 @@ plot_fake_data_all
 
 ```
 
+We run the model and inspect the posterior. 
+
+
+::: {.callout-note appearance="simple" collapse="true"}
+
+## Summary table
+
 ```{r}
 #| echo: false
 
 tar_load(all_fixed_mod_mcmc_all_fixed)
 
 all_fixed_mod_mcmc_all_fixed$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2")) |> 
-  posterior::summarise_draws() |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
   flextable::flextable()
 ```
+
+:::
+
+And finally we confirm that everything is good by ploting the predicted regression for each years. 
 
 ```{r}
 #| echo: false
@@ -1157,6 +1195,8 @@ all_fixed_mod_mcmc_all_fixed |>
 ```
 
 # Testing the ~Year model with data
+
+We will test our model with the LTDU data. At each year, one set of parameter is estimated (not hierarchical, yet). 
 
 ## Vizualising the data
 ```{r}
@@ -1183,22 +1223,29 @@ duck_data_all[c(3, 4, 6)] |>
 
 We will apply our model to the long-tailed duck data. Estimating parameters for each years.
 
+::: {.callout-note appearance="simple" collapse="true"}
+
+## Summary table
+
 ```{r}
 #| echo: false
-#| column: screen-inset
 tar_load(duck_all_mod_mcmc_all_fixed)
 
 duck_all_mod_mcmc_all_fixed$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2")) |> 
-  posterior::summarise_draws() |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
   flextable::flextable()
 ```
+
+:::
+
+Plot of the predicted regression. It works very well! But as we can see, the prediction for 2021 is not very good as we have no data. 
 
 ```{r}
 #| echo: false
 #| column: screen-inset
 #| fig-align: center
-#| fig-width: 10
-#| fig-height: 10
+#| fig-width: 8
+#| fig-height: 8
 
 tar_load(duck_data_all)
 
@@ -1300,7 +1347,8 @@ Here is the pdf of all the parameters
 ```{r}
 #| echo: false
 #| layout-nrow: 2
-#| column: page
+#| fig-width: 6
+#| fig-height: 6
 
 tar_load(fake_data_hierarchical)
 
@@ -1330,17 +1378,26 @@ abline(v = fake_data_hierarchical$.join_data$b2, col = viridis::viridis(5)[4], l
 
 ```
 
-#### b1 hierarchical
+### b1 hierarchical
+
+But when we try to run this model, things get bad. The r-hat are good, but when we look at the predicted graph, we see that the variance is some parameters is to high + it seems the model have some difficulties with parameter identification (maybe it confuse $b1$ and $b1$). 
+
+::: {.callout-note appearance="simple" collapse="true"}
+
+## Summary table
 
 ```{r}
 #| echo: false
 tar_load(b1_hierarchical_mcmc_b1_hierarchical)
 
 b1_hierarchical_mcmc_b1_hierarchical$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2", "b1_avg", "b1_sigma")) |> 
-  posterior::summarise_draws() |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
   flextable::flextable()
 
 ```
+
+:::
+
 
 ```{r}
 #| echo: false
@@ -1357,7 +1414,13 @@ b1_hierarchical_mcmc_b1_hierarchical |>
   facet_wrap(~ newyear)
 ```
 
-#### b1 hierarchical normal centered
+### b1 hierarchical normal centered
+
+One solution would be to center the parameter and scale it back for the prediction. Unfortunately, it doesn't help that much. 
+
+::: {.callout-note appearance="simple" collapse="true"}
+
+## Summary table
 
 ```{r}
 #| echo: false
@@ -1365,10 +1428,12 @@ b1_hierarchical_mcmc_b1_hierarchical |>
 tar_load(b1_hierarchical_nc_mcmc_b1_hierarchical_nc)
 
 b1_hierarchical_nc_mcmc_b1_hierarchical_nc$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2", "b1_avg", "b1_sigma")) |> 
-  posterior::summarise_draws() |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
   flextable::flextable()
 
 ```
+
+:::
 
 ```{r}
 #| echo: false
@@ -1385,16 +1450,78 @@ b1_hierarchical_nc_mcmc_b1_hierarchical_nc |>
   facet_wrap(~ newyear)
 ```
 
-#### all hierarchical
+## All hierarchical
+
+Why not trying with all the parameters hierarchical to see if it works better? (spoiler alert: it does!)
+
+##### Stan model
+
+::: {.callout-note appearance="simple" collapse="true"}
+
+## Show stan model
+
+```{r}
+#| class-output: stan
+#| echo: false
+#| error: false
+
+all_hier_stan <- cmdstanr::cmdstan_model(stan_file = "all_hierarchical.stan")
+
+all_hier_stan
+```
+
+:::
 
 ##### Plot priors 
 
+We try to give flexible prior so not to force to much the arrival and departure date and the slopes. Note that the prior for $b1_sigma$ and $b2_sigma$ are identical (but are two seperate parameters). 
+
 ```{r}
 #| echo: false
+#| layout-nrow: 2
+#| fig-height: 4
+#| fig-width: 4
 
-# 
+ggplot(data.frame(x = c(110, 260)), aes(x = x)) +
+  xlim(c(110, 260)) +
+  stat_function(fun = dnorm, args = list(mean = 150, sd = 10), geom = "area", aes(fill = "b1_avg"), lwd = 1.5) +
+  stat_function(fun = dnorm, args = list(mean = 220, sd = 10), geom = "area", aes(fill = "b2_avg"), lwd = 1.5) +
+  scale_fill_manual("Parameters", values = alpha(c(viridis::viridis(7)[1], viridis::viridis(7)[2]), 0.7)) +
+  labs(x = "Julian date", y = "Prob. dens.") +
+  theme_classic()
+
+ggplot(data.frame(x = c(0, 60)), aes(x = x)) +
+  xlim(c(0, 20)) +
+  stat_function(fun = dcauchy, args = list(location = 0, scale = 7), geom = "area", aes(fill = "b1_sigma"), lwd = 1.5) +
+  scale_fill_manual("Parameters", values = alpha(c(viridis::viridis(7)[3]), 0.7)) +
+  labs(x = "sigma", y = "Prob. dens.") +
+  theme_classic()
+
+ggplot(data.frame(x = c(-4, 3)), aes(x = x)) +
+  xlim(c(-4, 3)) +
+  stat_function(fun = dnorm, args = list(mean = -1, sd = 0.8), geom = "area", aes(fill = "log_a_avg"), lwd = 1.5) +
+  stat_function(fun = dnorm, args = list(mean = 1, sd = 0.5), geom = "area", aes(fill = "f_avg"), lwd = 1.5) +
+  scale_fill_manual("Parameters", values = alpha(c(viridis::viridis(7)[4], viridis::viridis(7)[5]), 0.7)) +
+  labs(x = "log slope", y = "Prob. dens.") +
+  theme_classic()
+
+ggplot(data.frame(x = c(0, 5)), aes(x = x)) +
+  xlim(c(0, 5)) +
+  stat_function(fun = dcauchy, args = list(location = 0, scale = 1), geom = "area", aes(fill = "log_a_sigma"), lwd = 1.5) +
+  stat_function(fun = dcauchy, args = list(location = 0, scale = 0.5), geom = "area", aes(fill = "f_sigma"), lwd = 1.5) +
+  scale_fill_manual("Parameters", values = alpha(c(viridis::viridis(7)[6], viridis::viridis(7)[7]), 0.7)) +
+  labs(x = "sigma", y = "Prob. dens.") +
+  theme_classic()
 
 ```
+
+##### Summary table
+
+The model works well! All parameters are estimated with reasonable variance and the r-hat values are good.
+
+::: {.callout-note appearance="simple" collapse="true"}
+
+## Summary table
 
 ```{r}
 #| echo: false
@@ -1403,11 +1530,16 @@ tar_load(all_hierarchical_mcmc_all_hierarchical)
 
 all_hierarchical_mcmc_all_hierarchical$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2", "b1_avg", "b1_sigma", "b2_avg", "b2_sigma",
 "log_a_avg", "log_a_sigma", "f_avg", "f_sigma")) |> 
-  posterior::summarise_draws() |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
   flextable::flextable()
 
 ```
 
+:::
+
+##### Plot of the predicted relation
+
+All of the regression curves look good!
 ```{r}
 #| echo: false
 
@@ -1425,6 +1557,14 @@ all_hierarchical_mcmc_all_hierarchical |>
 
 # Testing the hierarchical model with duck data
 
+We lunch the model on the long-tailed duck data. We expect little variation in the $b$ parameters and a great variance for 2021 as there is no data in the spring (and little data at all). 
+
+The model seems to perform just fine! 
+
+::: {.callout-note appearance="simple" collapse="true"}
+
+## Summary table
+
 ```{r}
 #| echo: false
 
@@ -1432,13 +1572,21 @@ tar_load(duck_hierarchical_mcmc_all_hierarchical)
 
 duck_hierarchical_mcmc_all_hierarchical$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2", "b1_avg", "b1_sigma", "b2_avg", "b2_sigma",
 "log_a_avg", "log_a_sigma", "f_avg", "f_sigma")) |> 
-  posterior::summarise_draws() |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
   flextable::flextable()
 
 ```
 
+:::
+
+Graphical examination of the predicted regression. 
+
 ```{r}
 #| echo: false
+#| column: page
+#| fig-align: center
+#| fig-height: 8
+#| fig-width: 8
 
 duck_hierarchical_mcmc_all_hierarchical |> 
   tidybayes::gather_rvars(mu_line[i]) |> 
@@ -1449,15 +1597,77 @@ duck_hierarchical_mcmc_all_hierarchical |>
   facet_wrap(~ newyear)
 ```
 
+Plot of the difference between $b1$ and $b2$ values for each year. First try to look at the difference not only in arrival and departure date, but also in duration. 
+
 ```{r}
 #| echo: false
 
 duck_hierarchical_mcmc_all_hierarchical |>
   tidybayes::gather_rvars(stay[i]) |> 
   ggplot(aes(x = i, ydist = .value)) +
-  tidybayes::stat_lineribbon()
+  tidybayes::stat_lineribbon() +
+  theme_classic()
 
 ```
+
+
+# Testing the hierarchical model with Lapland longspur data
+
+We lunch the model on a second species not used so far to develop the model to validate its generality on other species. It is interesting to note that the departure date estimated is after the last observation as often one or two individuals are observed at the very end of the season. 
+
+::: {.callout-note appearance="simple" collapse="true"}
+
+## Summary table
+
+```{r}
+#| echo: false
+
+tar_load(lalo_hierarchical_mcmc_all_hierarchical)
+
+lalo_hierarchical_mcmc_all_hierarchical$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2", "b1_avg", "b1_sigma", "b2_avg", "b2_sigma",
+"log_a_avg", "log_a_sigma", "f_avg", "f_sigma")) |> 
+  posterior::summarise_draws("mean", "sd", ~quantile(.x, probs = c(0.05, 0.95)), "rhat") |> 
+  flextable::flextable()
+
+```
+
+:::
+
+Graphical examination of the predicted regression. 
+
+As expected, the departure is very badly explained. The slope goes way beyond the date at which everyone left Bylot. Of course, the arrival of winter would force the specie to leave, so the estimated departure date is probably wrong. 
+
+```{r}
+#| echo: false
+#| column: page
+#| fig-align: center
+#| fig-height: 8
+#| fig-width: 8
+
+tar_load(lalo_data_all)
+
+lalo_hierarchical_mcmc_all_hierarchical |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(lalo_data_all[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+Plot of the difference between $b1$ and $b2$ values for each year. First try to look at the difference not only in arrival and departure date, but also in duration. 
+
+```{r}
+#| echo: false
+
+lalo_hierarchical_mcmc_all_hierarchical |>
+  tidybayes::gather_rvars(stay[i]) |> 
+  ggplot(aes(x = i, ydist = .value)) +
+  tidybayes::stat_lineribbon() +
+  theme_classic()
+
+```
+
 
 ** **TODO** **
 
@@ -1471,5 +1681,9 @@ duck_hierarchical_mcmc_all_hierarchical |>
 - [x] Simulate and run an additive model in Stan
 - [X] Simulate and run a model with all the relevant parameter varying with year
 - [X] Run a model for the Long-tailed Duck with parameter varying each year
-- [ ] Simulate data with a hierarchical structure for one parameters (ex: b1)
-- [ ] Run a hierarchical model for one parameters
+- [X] Simulate data with a hierarchical structure for one parameters (ex: b1)
+- [X] Run a hierarchical model for one parameters
+- [X] Simulate data with a hierarchical structure for all parameters
+- [X] Run a hierarchical model for all parameters
+- [X] Test it with LTDU data
+- [X] Celebrate 🥳
