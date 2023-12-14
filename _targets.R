@@ -376,10 +376,45 @@ list(
   ),
   
   
+  # Test hierarchical model b1
+  tar_stan_mcmc(
+    b1_hierarchical,
+    stan_files = "b1_hierarchical.stan",
+    data = fake_data_hierarchical,
+    parallel_chains = 4
+  ),
+  
   # Plot the simulated hierarchical data
   tar_target(
     plot_fake_data_hierarchical,
     plot_fake_logit(fake_data_hierarchical)
+  ),
+  
+  
+  # Test hierarchical model b1 normal centered
+  tar_stan_mcmc(
+    b1_hierarchical_nc,
+    stan_files = "b1_hierarchical_nc.stan",
+    data = fake_data_hierarchical,
+    parallel_chains = 4
+  ),
+  
+  
+  # Test hierarchical model all parameters
+  tar_stan_mcmc(
+    all_hierarchical,
+    stan_files = "all_hierarchical.stan",
+    data = fake_data_hierarchical,
+    parallel_chains = 4
+  ),
+  
+  
+  # Test hierarchical model with duck data
+  tar_stan_mcmc(
+    duck_hierarchical,
+    stan_files = "all_hierarchical.stan",
+    data = duck_data_all,
+    parallel_chains = 4
   ),
   
   

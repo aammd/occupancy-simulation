@@ -1100,6 +1100,7 @@ logis_a_mcmc_a_logis |>
 
 As for before, we start to generate fake data. For each year, we will make the following parameters vary : $a$, $f$, $b1$ and $b2$. The only parameter that we keep constant is the probability of detection, as we assume that it should no vary, for one species, between years. 
 With parameters varying each year, we modify the equation so that it matches for year $i$
+
 $$
 \begin{align}
 Pr(y = 1) &= Bernoulli(w * p) \\\\
@@ -1265,9 +1266,9 @@ $$
 Pr(y = 1) &= Bernoulli(w * p) \\\\
 
 w &= 1 - (1 - d)^{effort} \\
-p &= \dfrac{e^{-a^i f^i (date - b_1^i)}}{1 + e^{-a^i f^i (date - b_1^i)}} * \dfrac{e^{a^i (1 - f^i) (date - b_2^i)}}{1+e^{a^i (1 - f^i) (date - b_2^i)}}\\\\ 
+p &= \dfrac{e^{-a^i f^i (\text{date} - b_1^i)}}{1 + e^{-a^i f^i (date - b_1^i)}} * \dfrac{e^{a^i (1 - f^i) (date - b_2^i)}}{1+e^{a^i (1 - f^i) (date - b_2^i)}}\\\\ 
 
-a^i &= exp(\alpha^i) \\
+a^i &= e^(\alpha^i) \\
 f^i &= \dfrac{e^{\phi^i}}{1 + e^{\phi^i}} \\\\
 
 \alpha^i &\sim \text{Normal} \\
@@ -1294,7 +1295,7 @@ plot_fake_data_hierarchical
 
 ```
 
-Her is the pdf of all the parameters
+Here is the pdf of all the parameters
 
 ```{r}
 #| echo: false
@@ -1326,6 +1327,135 @@ abline(v = fake_data_hierarchical$.join_data$b1, col = viridis::viridis(5)[3], l
 plot(x4, dnorm(x4, mean = fake_data_hierarchical$.join_data$hyperparameters$b2.mu, 
                   sd = fake_data_hierarchical$.join_data$hyperparameters$b2.sigma), type = "l", xlab = "", yaxt="n", ylab="", lwd = 2, main = "b2")
 abline(v = fake_data_hierarchical$.join_data$b2, col = viridis::viridis(5)[4], lwd = 2)
+
+```
+
+#### b1 hierarchical
+
+```{r}
+#| echo: false
+tar_load(b1_hierarchical_mcmc_b1_hierarchical)
+
+b1_hierarchical_mcmc_b1_hierarchical$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2", "b1_avg", "b1_sigma")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+
+```
+
+```{r}
+#| echo: false
+
+tar_load(fake_data_hierarchical)
+
+
+b1_hierarchical_mcmc_b1_hierarchical |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_hierarchical[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+#### b1 hierarchical normal centered
+
+```{r}
+#| echo: false
+
+tar_load(b1_hierarchical_nc_mcmc_b1_hierarchical_nc)
+
+b1_hierarchical_nc_mcmc_b1_hierarchical_nc$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2", "b1_avg", "b1_sigma")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+
+```
+
+```{r}
+#| echo: false
+
+tar_load(fake_data_hierarchical)
+
+
+b1_hierarchical_nc_mcmc_b1_hierarchical_nc |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_hierarchical[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+#### all hierarchical
+
+##### Plot priors 
+
+```{r}
+#| echo: false
+
+# 
+
+```
+
+```{r}
+#| echo: false
+
+tar_load(all_hierarchical_mcmc_all_hierarchical)
+
+all_hierarchical_mcmc_all_hierarchical$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2", "b1_avg", "b1_sigma", "b2_avg", "b2_sigma",
+"log_a_avg", "log_a_sigma", "f_avg", "f_sigma")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+
+```
+
+```{r}
+#| echo: false
+
+tar_load(fake_data_hierarchical)
+
+
+all_hierarchical_mcmc_all_hierarchical |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(fake_data_hierarchical[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+# Testing the hierarchical model with duck data
+
+```{r}
+#| echo: false
+
+tar_load(duck_hierarchical_mcmc_all_hierarchical)
+
+duck_hierarchical_mcmc_all_hierarchical$draws(variables = c("prob_detect", "log_a", "f", "b1", "b2", "b1_avg", "b1_sigma", "b2_avg", "b2_sigma",
+"log_a_avg", "log_a_sigma", "f_avg", "f_sigma")) |> 
+  posterior::summarise_draws() |> 
+  flextable::flextable()
+
+```
+
+```{r}
+#| echo: false
+
+duck_hierarchical_mcmc_all_hierarchical |> 
+  tidybayes::gather_rvars(mu_line[i]) |> 
+  dplyr::bind_cols(as.data.frame(duck_data_all[c("newdate", "newyear")])) |> 
+  ggplot(aes(x = newdate, dist = .value, group = newyear)) + 
+  tidybayes::stat_lineribbon() +
+  theme_classic() +
+  facet_wrap(~ newyear)
+```
+
+```{r}
+#| echo: false
+
+duck_hierarchical_mcmc_all_hierarchical |>
+  tidybayes::gather_rvars(stay[i]) |> 
+  ggplot(aes(x = i, ydist = .value)) +
+  tidybayes::stat_lineribbon()
 
 ```
 

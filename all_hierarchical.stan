@@ -22,6 +22,12 @@ parameters {
   
   real b1_avg;
   real<lower=0> b1_sigma;
+  real<lower=b1_avg> b2_avg;
+  real<lower=0> b2_sigma;
+  real log_a_avg;
+  real<lower=0> log_a_sigma;
+  real f_avg;
+  real<lower=0> f_sigma;
 }
 
 // The model to be estimated. We model the output
@@ -35,22 +41,31 @@ transformed parameters{
 
 model {
   b1_avg ~ normal(150, 7);
-  b1_sigma ~ cauchy(0, 1);
+  b1_sigma ~ cauchy(0, 7);
+  
+  b2_avg ~ normal(210, 7);
+  b2_sigma ~ cauchy(0, 7);
+  
+  log_a_avg ~ normal(-1, 0.8);
+  log_a_sigma ~ cauchy(0, 1);
+  
+  f_avg ~ normal(1, 0.5);
+  f_sigma ~ cauchy(0, 0.5);
   
   prob_detect ~ beta(2, 5);
-  log_a ~  normal(-1, 0.8);
-  f ~  normal(1, 0.5);
+  log_a ~  normal(log_a_avg, log_a_sigma);
+  f ~  normal(f_avg, f_sigma);
   b1 ~ normal(b1_avg, b1_sigma);
-  b2 ~ normal(210, 7);
+  b2 ~ normal(b2_avg, b2_sigma);
   
   
   y ~ bernoulli((1 - (1 - prob_detect)^effort) .* 
-                inv_logit(-a_abs[year] .* f_prob[year] .* (jj_date - b1[year])) .*
-                inv_logit(a_abs[year] .* (1 - f_prob[year]) .* (jj_date - b2[year])));
+                inv_logit(a_abs[year] .* f_prob[year] .* (jj_date - b1[year])) .*
+                inv_logit(-a_abs[year] .* (1 - f_prob[year]) .* (jj_date - b2[year])));
 }
 generated quantities {
-  vector[n_new*N_Y] mu_line = inv_logit(-a_abs[newyear] .* f_prob[newyear] .* (newdate - b1[newyear])) .*
-                inv_logit(a_abs[newyear] .* (1 - f_prob[newyear]) .* (newdate - b2[newyear]));
+  vector[n_new*N_Y] mu_line = inv_logit(a_abs[newyear] .* f_prob[newyear] .* (newdate - b1[newyear])) .*
+                inv_logit(-a_abs[newyear] .* (1 - f_prob[newyear]) .* (newdate - b2[newyear]));
                 
-// vector[N_Y] stay = b2 .- b1;
+  vector[N_Y] stay = b2 - b1;
 }

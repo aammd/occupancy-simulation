@@ -17,7 +17,7 @@ parameters {
   
   vector[N_Y] log_a; // Value of a
   vector[N_Y] f; // Link with slope of a
-  vector<lower=1, upper=365>[N_Y] b1;
+  vector<lower=1, upper=365>[N_Y] z_b1;
   vector<lower=1, upper=365>[N_Y] b2;
   
   real b1_avg;
@@ -31,16 +31,18 @@ parameters {
 transformed parameters{
   vector[N_Y] f_prob = inv_logit(f);
   vector[N_Y] a_abs = exp(log_a);
-}
+  
+  vector[N_Y] b1 = b1_avg + z_b1 * b1_sigma;
+} 
 
 model {
   b1_avg ~ normal(150, 7);
-  b1_sigma ~ cauchy(0, 1);
+  b1_sigma ~ exponential(0.4);
   
   prob_detect ~ beta(2, 5);
   log_a ~  normal(-1, 0.8);
   f ~  normal(1, 0.5);
-  b1 ~ normal(b1_avg, b1_sigma);
+  z_b1 ~ std_normal();
   b2 ~ normal(210, 7);
   
   
@@ -52,5 +54,5 @@ generated quantities {
   vector[n_new*N_Y] mu_line = inv_logit(-a_abs[newyear] .* f_prob[newyear] .* (newdate - b1[newyear])) .*
                 inv_logit(a_abs[newyear] .* (1 - f_prob[newyear]) .* (newdate - b2[newyear]));
                 
-// vector[N_Y] stay = b2 .- b1;
+  vector[N_Y] stay = b2 - b1;
 }
